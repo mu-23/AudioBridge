@@ -96,7 +96,7 @@ jobs:
           set -euo pipefail
           mkdir -p "$GITHUB_WORKSPACE/release-assets"
           cp app/build/outputs/apk/debug/app-debug.apk \
-            "$GITHUB_WORKSPACE/release-assets/WiFi-Audio-Streaming-Android-${WFAS_RELEASE_VERSION}.apk"
+            "$GITHUB_WORKSPACE/release-assets/AudioBridge-Android-${WFAS_RELEASE_VERSION}.apk"
 
       - name: Upload Android release asset
         uses: actions/upload-artifact@v4
@@ -169,6 +169,6 @@ jobs:
           gh release create "$RELEASE_TAG" \
             --repo "${GITHUB_REPOSITORY}" \
             --verify-tag \
-            --title "WiFi Audio Streaming $RELEASE_TAG" \
+            --title "AudioBridge $RELEASE_TAG" \
             --generate-notes \
             release-assets/*

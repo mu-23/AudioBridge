@@ -57,6 +57,8 @@ object NotificationCenter {
     private const val REQ_SERVER_VOLUME_UP = 3
     private const val REQ_CLIENT_VOLUME_DOWN = 4
     private const val REQ_CLIENT_VOLUME_UP = 5
+    private const val REQ_SERVER_VOLUME_POPUP = 6
+    private const val REQ_CLIENT_VOLUME_POPUP = 7
 
     private val obsoleteChannels = listOf(
         "audio_stream_channel_v2",
@@ -151,6 +153,7 @@ object NotificationCenter {
         val icon = if (muted) R.drawable.ic_notif_volume_off else R.drawable.ic_notif_stream
 
         return baseBuilder(context, CHANNEL_SERVER, icon)
+            .setContentIntent(volumeControl(context, VolumeControlActivity.MODE_SERVER))
             .setContentTitle(context.getString(R.string.notif_server_title))
             .setContentText(status)
             .setSubText(volumeLabel(context, percent))
@@ -172,6 +175,7 @@ object NotificationCenter {
             CHANNEL_CLIENT,
             if (muted) R.drawable.ic_notif_volume_off else R.drawable.ic_notif_client
         )
+            .setContentIntent(volumeControl(context, VolumeControlActivity.MODE_CLIENT))
             .setContentTitle(context.getString(R.string.notif_client_title))
             .setContentText(status)
             .setSubText(volumeLabel(context, percent))
@@ -198,6 +202,7 @@ object NotificationCenter {
             CHANNEL_SERVER,
             if (muted) R.drawable.ic_notif_volume_off else R.drawable.ic_notif_stream
         )
+            .setContentIntent(volumeControl(context, VolumeControlActivity.MODE_SERVER))
             .setContentTitle("WFAS · Shizuku Audio Bridge")
             .setContentText(status)
             .setSubText(volumeLabel(context, percent))
@@ -379,6 +384,24 @@ object NotificationCenter {
                 StreamingActionReceiver.ACTION_CLIENT_VOLUME_UP
             )
         ).build()
+
+    private fun volumeControl(context: Context, mode: String): PendingIntent {
+        val requestCode = if (mode == VolumeControlActivity.MODE_SERVER) {
+            REQ_SERVER_VOLUME_POPUP
+        } else {
+            REQ_CLIENT_VOLUME_POPUP
+        }
+        val intent = Intent(context, VolumeControlActivity::class.java).apply {
+            putExtra(VolumeControlActivity.EXTRA_MODE, mode)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        return PendingIntent.getActivity(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+    }
 
     private fun openApp(context: Context): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {

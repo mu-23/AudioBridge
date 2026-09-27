@@ -52,11 +52,6 @@ jobs:
           fi
           echo "WFAS_LAB_KEYSTORE=$GITHUB_WORKSPACE/.ci/lab-debug.keystore" >> "$GITHUB_ENV"
 
-      - name: Print lab signing certificate fingerprint
-        run: |
-          set -euo pipefail
-          keytool -list -v -keystore .ci/lab-debug.keystore -storepass android -alias androiddebugkey | grep -E "SHA256:"
-
 
       - name: Install Android 36 SDK
         run: |

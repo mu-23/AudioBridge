@@ -424,7 +424,6 @@ class MainActivity : AppCompatActivity() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun requestServerStart(params: ResolvedServerParams) {
-        RoleSelectionGate.selectSender()
         pendingServerParams = params
         val settings = viewModel.appSettings.value
 
@@ -604,7 +603,6 @@ class MainActivity : AppCompatActivity() {
         val automationToken by viewModel.automationToken.collectAsStateWithLifecycle()
 
         val isServer by viewModel.isServer.collectAsStateWithLifecycle()
-        val selectedRole by RoleSelectionGate.role.collectAsStateWithLifecycle()
         val isStreaming by viewModel.isStreaming.collectAsStateWithLifecycle()
         val connectionStatus by viewModel.connectionStatus.collectAsStateWithLifecycle()
         val discoveredDevices by viewModel.discoveredDevices.collectAsStateWithLifecycle()
@@ -750,11 +748,9 @@ class MainActivity : AppCompatActivity() {
             updateWidgetState(context, isStreaming, isServer)
         }
 
-        LaunchedEffect(currentSettings.autoConnectEnabled, selectedRole) {
+        LaunchedEffect(currentSettings.autoConnectEnabled, isServer) {
             val autoConnectIntent = Intent(context, AutoConnectService::class.java)
-            val receiverReady =
-                selectedRole == RoleSelectionGate.Role.RECEIVER
-            if (currentSettings.autoConnectEnabled && receiverReady) {
+            if (currentSettings.autoConnectEnabled && !isServer) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     context.startForegroundService(autoConnectIntent)
                 } else {

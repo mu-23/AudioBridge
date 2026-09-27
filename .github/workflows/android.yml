@@ -80,10 +80,10 @@ jobs:
       - name: Prepare versioned APK
         run: |
           set -euo pipefail
-          APK_NAME="WiFi-Audio-Streaming-Android-${GITHUB_RUN_NUMBER}.apk"
+          APK_NAME="AudioBridge-Android-${GITHUB_RUN_NUMBER}.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/$APK_NAME"
           echo "WFAS_APK_PATH=$GITHUB_WORKSPACE/$APK_NAME" >> "$GITHUB_ENV"
-          echo "WFAS_ARTIFACT_NAME=WiFi-Audio-Streaming-Android-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          echo "WFAS_ARTIFACT_NAME=AudioBridge-Android-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4

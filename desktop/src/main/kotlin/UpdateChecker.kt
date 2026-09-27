@@ -19,7 +19,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object DownloadLinks {
-    const val GITHUB_RELEASES = "https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop/releases"
+    const val GITHUB_RELEASES = "https://github.com/mu-23/WiFiAudioStreaming/releases"
     private const val SITE_EN = "https://www.marcomorosi.eu/wifi-audio-streaming/download/"
     private const val SITE_IT = "https://www.marcomorosi.eu/it/wifi-audio-streaming/download/"
 
@@ -29,8 +29,8 @@ object DownloadLinks {
 
 object UpdateChecker {
 
-    private const val REPO = "marcomorosi06/WiFiAudioStreaming-Desktop"
-    const val RELEASES_URL = "https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop/releases/latest"
+    private const val REPO = "mu-23/WiFiAudioStreaming"
+    const val RELEASES_URL = "https://github.com/mu-23/WiFiAudioStreaming/releases/latest"
 
     val currentVersion: String get() = Strings.appVersion
 

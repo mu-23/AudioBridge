@@ -96,8 +96,7 @@ class AutoConnectService : Service() {
 
     @SuppressLint("MissingPermission")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (StreamingActionReceiver.wasRecentlyTaskRemoved(this) ||
-            !RoleSelectionGate.isReceiverSelected()
+        if (StreamingActionReceiver.wasRecentlyTaskRemoved(this)
         ) {
             stopSelf()
             return START_NOT_STICKY
@@ -115,10 +114,10 @@ class AutoConnectService : Service() {
             while (isActive) {
                 val prefs = settingsDataStore.settingsFlow.first()
 
-                if (!prefs.autoConnectEnabled || !RoleSelectionGate.isReceiverSelected()) {
+                if (!prefs.autoConnectEnabled) {
                     Log.d(
                         "AutoConnect",
-                        "Auto-connect stopped: disabled or receiver role no longer selected."
+                        "Auto-connect stopped: disabled."
                     )
                     stopSelf()
                     return@launch
@@ -166,7 +165,6 @@ class AutoConnectService : Service() {
 
                     while (
                         isActive &&
-                        RoleSelectionGate.isReceiverSelected() &&
                         !NetworkManager.isStreamingCurrent.value &&
                         !isConnecting
                     ) {
@@ -239,11 +237,6 @@ class AutoConnectService : Service() {
                 }
 
                 if (targetServer != null) {
-                    if (!RoleSelectionGate.isReceiverSelected()) {
-                        stopSelf()
-                        return@launch
-                    }
-
                     isConnecting = true
                     NetworkManager.isServerStreaming = false
 

@@ -1,4 +1,4 @@
-name: Build Android
+name: Validate Android
 
 on:
   workflow_dispatch:
@@ -42,23 +42,6 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Restore stable Android signing key
-        uses: actions/cache@v4
-        with:
-          path: .ci/lab-debug.keystore
-          key: wfas-audio-bridge-lab-debug-keystore-v2
-
-      - name: Require AudioBridge signing key
-        run: |
-          set -euo pipefail
-          KEYSTORE="$GITHUB_WORKSPACE/.ci/lab-debug.keystore"
-          if [ ! -f "$KEYSTORE" ]; then
-            echo "::error::AudioBridge signing key is unavailable. Refusing to generate a new key because that would break Android in-place upgrades."
-            exit 1
-          fi
-          echo "WFAS_LAB_KEYSTORE=$KEYSTORE" >> "$GITHUB_ENV"
-          keytool -list -v -keystore "$KEYSTORE" -storepass android -alias androiddebugkey | grep -E "SHA256:"
-
       - name: Install Android 36 SDK
         run: |
           yes | sdkmanager --licenses >/dev/null || true
@@ -76,20 +59,5 @@ jobs:
           chmod +x gradlew
           ./gradlew :app:testDebugUnitTest --stacktrace
 
-      - name: Build Android APK
+      - name: Compile Android APK (not published)
         run: ./gradlew :app:assembleDebug --stacktrace
-
-      - name: Prepare versioned APK
-        run: |
-          set -euo pipefail
-          APK_NAME="AudioBridge-Android-${GITHUB_RUN_NUMBER}.apk"
-          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/$APK_NAME"
-          echo "WFAS_APK_PATH=$GITHUB_WORKSPACE/$APK_NAME" >> "$GITHUB_ENV"
-          echo "WFAS_ARTIFACT_NAME=AudioBridge-Android-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
-
-      - name: Upload Android APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.WFAS_ARTIFACT_NAME }}
-          path: ${{ env.WFAS_APK_PATH }}
-          if-no-files-found: error

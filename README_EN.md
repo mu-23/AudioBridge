@@ -12,6 +12,12 @@ Both applications are maintained together so protocol, reconnect, liveness and a
 
 The first Desktop integration target is Windows 10/11 x64, while the existing Linux/macOS architecture remains in the tree.
 
+## Unified Releases
+
+Android and Windows Desktop share one GitHub Releases page.
+
+Creating a `v*` tag such as `v1.2.1` builds both applications and publishes the signed Android APK and Windows portable ZIP together in the same release. Both in-app update checkers use this shared release source.
+
 ## Build
 
 Android:

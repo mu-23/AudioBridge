@@ -62,6 +62,19 @@ Desktop 代码已经并入本仓库，后续在这里直接维护，不再拆成
 
 协议兼容性修改应同时检查 Android 与 Desktop。
 
+## 统一发布
+
+Android 与 Windows Desktop 共用同一个 GitHub Releases 页面。
+
+在仓库创建一个 `v*` 标签（例如 `v1.2.1`）后，统一发布流水线会：
+
+1. 运行 Android 单元测试并构建带固定签名的 APK。
+2. 构建 Windows Desktop 便携 ZIP。
+3. 使用同一个版本号生成两端产物。
+4. 将 APK 与 Windows ZIP 一起发布到同一个 GitHub Release。
+
+这样 Android 与 Desktop 的应用内更新检查都会指向同一个版本源。
+
 ## 构建
 
 ### Android

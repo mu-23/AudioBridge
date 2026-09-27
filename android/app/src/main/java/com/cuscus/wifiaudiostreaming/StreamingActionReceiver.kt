@@ -27,20 +27,33 @@ class StreamingActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             ACTION_STOP_STREAMING -> stopEverything(context)
-            ACTION_VOLUME_UP -> shiftVolume(NotificationCenter.VOLUME_STEP)
-            ACTION_VOLUME_DOWN -> shiftVolume(-NotificationCenter.VOLUME_STEP)
+            ACTION_SERVER_VOLUME_UP -> shiftServerVolume(NotificationCenter.VOLUME_STEP)
+            ACTION_SERVER_VOLUME_DOWN -> shiftServerVolume(-NotificationCenter.VOLUME_STEP)
+            ACTION_CLIENT_VOLUME_UP -> shiftClientVolume(NotificationCenter.VOLUME_STEP)
+            ACTION_CLIENT_VOLUME_DOWN -> shiftClientVolume(-NotificationCenter.VOLUME_STEP)
         }
     }
 
-    private fun shiftVolume(delta: Float) {
+    private fun shiftServerVolume(delta: Float) {
         NetworkManager.serverVolume.value =
             NotificationCenter.nudgeVolume(NetworkManager.serverVolume.value, delta)
     }
 
+    private fun shiftClientVolume(delta: Float) {
+        val next = (NetworkManager.clientVolume.value + delta).coerceIn(0f, 1f)
+        NetworkManager.setClientVolume(next)
+    }
+
     companion object {
         const val ACTION_STOP_STREAMING = "com.cuscus.wifiaudiostreaming.ACTION_STOP_STREAMING"
-        const val ACTION_VOLUME_UP = "com.cuscus.wifiaudiostreaming.ACTION_VOLUME_UP"
-        const val ACTION_VOLUME_DOWN = "com.cuscus.wifiaudiostreaming.ACTION_VOLUME_DOWN"
+        const val ACTION_SERVER_VOLUME_UP =
+            "com.cuscus.wifiaudiostreaming.ACTION_SERVER_VOLUME_UP"
+        const val ACTION_SERVER_VOLUME_DOWN =
+            "com.cuscus.wifiaudiostreaming.ACTION_SERVER_VOLUME_DOWN"
+        const val ACTION_CLIENT_VOLUME_UP =
+            "com.cuscus.wifiaudiostreaming.ACTION_CLIENT_VOLUME_UP"
+        const val ACTION_CLIENT_VOLUME_DOWN =
+            "com.cuscus.wifiaudiostreaming.ACTION_CLIENT_VOLUME_DOWN"
 
         /**
          * One authoritative user-requested shutdown path.

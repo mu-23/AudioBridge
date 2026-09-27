@@ -12,12 +12,17 @@ plugins {
 group = "com.wifiaudiostreaming"
 version = "7.0"
 
-val appVersion = "5.2.0"
+val appVersion = "5.2.1"
 
-val displayVersion = appVersion.split(".").let { p ->
-    val major = ((p.getOrNull(0)?.toIntOrNull() ?: 0) - 4).coerceAtLeast(0)
-    (listOf(major.toString()) + p.drop(1)).joinToString(".")
-}
+val displayVersion = System.getenv("WFAS_VERSION_NAME")
+    ?.trim()
+    ?.removePrefix("v")
+    ?.removePrefix("V")
+    ?.takeIf { it.isNotBlank() }
+    ?: appVersion.split(".").let { p ->
+        val major = ((p.getOrNull(0)?.toIntOrNull() ?: 0) - 4).coerceAtLeast(0)
+        (listOf(major.toString()) + p.drop(1)).joinToString(".")
+    }
 
 tasks.register("generateDisplayVersionFile") {
     val outFile = layout.buildDirectory.file("display-version.txt")
@@ -31,7 +36,10 @@ tasks.register("generateVersionProperties") {
     val outFile = layout.projectDirectory.file("src/main/resources/version.properties").asFile
     outputs.file(outFile)
     doLast {
-        outFile.writeText("app.version=$appVersion\n")
+        outFile.writeText(
+            "app.version=$appVersion\n" +
+                "app.display.version=$displayVersion\n"
+        )
     }
 }
 tasks.named("processResources") {

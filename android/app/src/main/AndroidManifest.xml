@@ -16,6 +16,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" tools:targetApi="33" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.CAMERA" />
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
@@ -114,14 +115,6 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.NoDisplay" />
 
-        <activity
-            android:name=".VolumeControlActivity"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:noHistory="true"
-            android:taskAffinity=""
-            android:theme="@style/Theme.WiFiAudioStreaming.VolumeDialog" />
-
         <receiver
             android:name=".StreamingActionReceiver"
             android:exported="false">
@@ -131,6 +124,8 @@
                 <action android:name="com.cuscus.wifiaudiostreaming.ACTION_SERVER_VOLUME_DOWN" />
                 <action android:name="com.cuscus.wifiaudiostreaming.ACTION_CLIENT_VOLUME_UP" />
                 <action android:name="com.cuscus.wifiaudiostreaming.ACTION_CLIENT_VOLUME_DOWN" />
+                <action android:name="com.cuscus.wifiaudiostreaming.ACTION_SHOW_SERVER_VOLUME" />
+                <action android:name="com.cuscus.wifiaudiostreaming.ACTION_SHOW_CLIENT_VOLUME" />
             </intent-filter>
         </receiver>
 

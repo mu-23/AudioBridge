@@ -85,6 +85,7 @@ class StreamingActionReceiver : BroadcastReceiver() {
             }
 
             val app = context.applicationContext
+            RoleSelectionGate.clear()
             app.getSharedPreferences(TASK_PREFS, Context.MODE_PRIVATE)
                 .edit()
                 .putLong(KEY_TASK_REMOVED_AT, System.currentTimeMillis())

@@ -41,6 +41,10 @@ class ClientService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (StreamingActionReceiver.wasRecentlyTaskRemoved(this)) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         if (!NotificationCenter.canPost(this)) {
             Toast.makeText(this, "Notifications permission missing", Toast.LENGTH_SHORT).show()
             stopSelf()
@@ -125,7 +129,7 @@ class ClientService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        StreamingActionReceiver.stopEverything(this)
+        StreamingActionReceiver.handleTaskRemoved(this)
         stopSelf()
         super.onTaskRemoved(rootIntent)
     }

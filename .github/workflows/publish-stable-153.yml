@@ -1,0 +1,73 @@
+name: Publish stable build 153
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/publish-stable-153.yml"
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download exact build 153 artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          gh run download 36250615057 \
+            --repo "${{ github.repository }}" \
+            --name "WiFi-Audio-Bridge-Lab-153" \
+            --dir release-assets
+          test -f release-assets/WiFi-Audio-Bridge-Lab-153.apk
+          cp release-assets/WiFi-Audio-Bridge-Lab-153.apk release-assets/AudioBridge-Android-Stable-153.apk
+          sha256sum release-assets/WiFi-Audio-Bridge-Lab-153.apk release-assets/AudioBridge-Android-Stable-153.apk
+
+      - name: Create stable tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! gh api "repos/$REPO/git/ref/tags/v1.2.1-audio-bridge-lab.153" >/dev/null 2>&1; then
+            gh api --method POST "repos/$REPO/git/refs" \
+              -f ref="refs/tags/v1.2.1-audio-bridge-lab.153" \
+              -f sha="56f56b2d760cc456c0100e537d037fb83b187053"
+          fi
+
+      - name: Mark v1.3.0 as test prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release edit v1.3.0 \
+            --repo "${{ github.repository }}" \
+            --title "AudioBridge v1.3.0 (Test)" \
+            --prerelease
+
+      - name: Publish build 153 as latest stable
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.2.1-audio-bridge-lab.153 --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload v1.2.1-audio-bridge-lab.153 \
+              release-assets/AudioBridge-Android-Stable-153.apk \
+              --repo "${{ github.repository }}" --clobber
+            gh release edit v1.2.1-audio-bridge-lab.153 \
+              --repo "${{ github.repository }}" \
+              --title "AudioBridge Stable 153" \
+              --latest
+          else
+            gh release create v1.2.1-audio-bridge-lab.153 \
+              release-assets/AudioBridge-Android-Stable-153.apk \
+              --repo "${{ github.repository }}" \
+              --title "AudioBridge Stable 153" \
+              --notes "Verified stable Android build #153. This release uses the exact original APK produced by GitHub Actions run #153 (version 1.2.1-audio-bridge-lab.153, versionCode 2201153) and preserves its original signing identity. This is the stable baseline for future Android signing." \
+              --latest
+          fi

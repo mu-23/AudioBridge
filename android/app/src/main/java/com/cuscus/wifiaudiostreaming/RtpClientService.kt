@@ -49,6 +49,11 @@ class RtpClientService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (StreamingActionReceiver.wasRecentlyTaskRemoved(this)) {
+            runCatching { RtpSession.stop() }
+            stopSelf()
+            return START_NOT_STICKY
+        }
         val entered = runCatching {
             NotificationCenter.ensureChannels(this)
             startForeground(

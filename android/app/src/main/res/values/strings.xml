@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">WiFi Audio Streaming</string>
+    <string name="app_name">AudioBridge</string>
     <string name="splash_tagline" translatable="false">AUDIO STREAMING OVER WIFI</string>
     <string name="connection_status_connected">Connected</string>
     <string name="connection_status_error">Connection error</string>
@@ -90,7 +90,7 @@
     <string name="sec_ask">Approval</string>
     <string name="mic_sends">Sends microphone</string>
     <string name="mic_wants">Accepts talk-back</string>
-    <string name="donation_title">Enjoying WiFi Audio Streaming?</string>
+    <string name="donation_title">Enjoying AudioBridge?</string>
     <string name="donation_body">This app is free and ad-free, made by one person in their spare time. If it\'s useful to you, a small tip on Ko-fi helps keep it alive. No pressure, everything keeps working either way.</string>
     <string name="donation_support">Support on Ko-fi ☕</string>
     <string name="donation_later">Maybe later</string>
@@ -115,7 +115,7 @@
     <string name="status_port_in_use">Error: Port already in use. Please try again.</string>
     <string name="status_client_error">Client error: %1$s</string>
     <string name="status_client_stopped">Client stopped.</string>
-    <string name="onboarding_welcome_title">Welcome to\nWiFi Audio Streaming!</string>
+    <string name="onboarding_welcome_title">Welcome to\nAudioBridge!</string>
     <string name="onboarding_welcome_subtitle">Turn your phone into a WiFi speaker for your PC. To get started, you\'ll need the desktop software.</string>
     <string name="onboarding_download_title">Download the Desktop Application</string>
     <string name="onboarding_download_link">Visit %1$s</string>
@@ -229,7 +229,7 @@
     <string name="onboarding_protocols_subtitle">Five ways to send the same audio. Pick the one that fits what you already own.</string>
 
     <string name="onboarding_proto1_title">WFAS (Native)</string>
-    <string name="onboarding_proto1_desc">Requires the WiFi Audio Streaming app on both devices. It offers the best synchronization, ideal for gaming and watching videos.</string>
+    <string name="onboarding_proto1_desc">Requires the AudioBridge app on both devices. It offers the best synchronization, ideal for gaming and watching videos.</string>
 
     <string name="onboarding_proto2_title">RTP Stream</string>
     <string name="onboarding_proto2_desc">Stream to external media players like VLC, Kodi, or FFplay. Just save the SDP file from the app and open it with your favorite player.</string>

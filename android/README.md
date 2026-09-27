@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/mu-23/WiFiAudioStreaming-Android/main/fastlane/metadata/android/en-US/images/icon.png" alt="WiFi Audio Streaming" width="120" />
+  <img src="https://raw.githubusercontent.com/mu-23/WiFiAudioStreaming/main/android/fastlane/metadata/android/en-US/images/icon.png" alt="WiFi Audio Streaming" width="120" />
 
   # WiFi Audio Streaming for Android
 
@@ -9,9 +9,9 @@
 
   **简体中文** | [English](README_EN.md)
 
-  [下载最新版本](https://github.com/mu-23/WiFiAudioStreaming-Android/releases/latest) ·
-  [查看 Releases](https://github.com/mu-23/WiFiAudioStreaming-Android/releases) ·
-  [实验分支](https://github.com/mu-23/WiFiAudioStreaming-Android/tree/audio-bridge-lab)
+  [下载最新版本](https://github.com/mu-23/WiFiAudioStreaming/releases/latest) ·
+  [查看 Releases](https://github.com/mu-23/WiFiAudioStreaming/releases) ·
+  [实验分支](https://github.com/mu-23/WiFiAudioStreaming/tree/audio-bridge-lab)
 </div>
 
 ---
@@ -165,7 +165,7 @@ WFAS UDP
 
 当前实验代码位于：
 
-[`audio-bridge-lab`](https://github.com/mu-23/WiFiAudioStreaming-Android/tree/audio-bridge-lab)
+[`audio-bridge-lab`](https://github.com/mu-23/WiFiAudioStreaming/tree/audio-bridge-lab)
 
 第一阶段正在验证 Android Shell UID 下的 `REMOTE_SUBMIX` 音频捕获；后续会继续研究 Shizuku UserService 和 Android AudioPolicy 路线。
 
@@ -233,8 +233,8 @@ Android 会要求内部音频捕获授权。
 需要 Android Studio / JDK 17。
 
 ```bash
-git clone https://github.com/mu-23/WiFiAudioStreaming-Android.git
-cd WiFiAudioStreaming-Android
+git clone https://github.com/mu-23/WiFiAudioStreaming.git
+cd WiFiAudioStreaming/android
 ./gradlew assembleDebug
 ```
 

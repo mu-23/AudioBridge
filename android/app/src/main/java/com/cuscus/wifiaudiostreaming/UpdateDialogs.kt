@@ -12,7 +12,7 @@ import androidx.compose.ui.res.stringResource
 
 object DownloadLinks {
     const val GITHUB_RELEASES =
-        "https://github.com/mu-23/WiFiAudioStreaming-Android/releases"
+        "https://github.com/mu-23/AudioBridge/releases"
 }
 
 @Composable

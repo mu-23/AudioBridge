@@ -255,15 +255,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     fun toggleMode(isServerMode: Boolean) {
+        val app = getApplication<Application>()
+        val wasServerMode = _isServer.value
+
+        if (wasServerMode != isServerMode) {
+            if (isServerMode) {
+                // Receive -> Send is an explicit end of the receiver session.
+                // Stop all receiver ownership immediately, but do NOT auto-start sending.
+                ClientSessionController.userDisconnect(app)
+                NetworkManager.stopStreaming(app)
+                app.stopService(Intent(app, ClientService::class.java))
+                app.stopService(Intent(app, AutoConnectService::class.java))
+                app.stopService(Intent(app, SnapcastClientService::class.java))
+                app.stopService(Intent(app, RtpClientService::class.java))
+                NotificationCenter.cancel(app, NotificationCenter.ID_CLIENT)
+                setIsStreaming(false)
+            } else {
+                // Send -> Receive must stop the active sender first so both roles
+                // cannot continue running behind the same UI.
+                if (ShizukuAudioBridgeManager.isActive()) {
+                    ShizukuAudioBridgeManager.stop(app)
+                }
+                NetworkManager.stopStreaming(app)
+                app.stopService(Intent(app, AudioCaptureService::class.java))
+                NotificationCenter.cancel(app, NotificationCenter.ID_SERVER)
+                setIsStreaming(false)
+            }
+        }
+
         _isServer.value = isServerMode
         if (isServerMode) {
             RoleSelectionGate.selectSender()
-        } else {
-            RoleSelectionGate.selectReceiver()
-        }
-        if (isServerMode) {
             NetworkManager.stopListeningForDevices()
             clearDiscoveredDevices()
+        } else {
+            RoleSelectionGate.selectReceiver()
         }
     }
 

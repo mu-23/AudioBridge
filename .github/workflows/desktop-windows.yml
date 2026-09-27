@@ -45,7 +45,7 @@ jobs:
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
-          name: WiFi-Audio-Streaming-Desktop-Windows
+          name: AudioBridge-Desktop-Windows
           path: |
             desktop/build/packages/*.zip
             desktop/build/compose/binaries/main-release/app/**

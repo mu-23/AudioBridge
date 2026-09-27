@@ -39,6 +39,10 @@ class AudioCaptureService : Service() {
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (StreamingActionReceiver.wasRecentlyTaskRemoved(this)) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         when (intent?.action) {
             ACTION_START -> {
                 val streamInternal = intent.getBooleanExtra(EXTRA_STREAM_INTERNAL, false)
@@ -273,7 +277,7 @@ class AudioCaptureService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        StreamingActionReceiver.stopEverything(this)
+        StreamingActionReceiver.handleTaskRemoved(this)
         stopSelf()
         super.onTaskRemoved(rootIntent)
     }

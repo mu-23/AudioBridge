@@ -183,7 +183,7 @@ fun AppSettings.toDlnaConfig(): DlnaServerConfig = DlnaServerConfig(
     port = dlnaPort.toIntOrNull() ?: 8081,
     preference = DlnaFormatPreference.fromId(dlnaFormat),
     selectedUdns = DlnaSelection.udns(dlnaDevices),
-    title = "WiFi Audio Streaming"
+    title = "AudioBridge"
 )
 
 object SettingsRepository {

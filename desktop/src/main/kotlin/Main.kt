@@ -1898,8 +1898,8 @@ object NetworkHandler_v1 {
 
             // Link e Ko-fi
             append("<div class=\"links\">")
-            append("<a href=\"https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop\" target=\"_blank\">💻 Get Desktop App (GitHub)</a>")
-            append("<a href=\"https://github.com/marcomorosi06/WiFiAudioStreaming-Android\" target=\"_blank\">📱 Get Android App (GitHub)</a>")
+            append("<a href=\"https://github.com/mu-23/WiFiAudioStreaming\" target=\"_blank\">💻 Get Desktop App (GitHub)</a>")
+            append("<a href=\"https://github.com/mu-23/WiFiAudioStreaming\" target=\"_blank\">📱 Get Android App (GitHub)</a>")
             append("<a href=\"https://apt.izzysoft.de/fdroid/index/apk/com.cuscus.wifiaudiostreaming\" target=\"_blank\">📲 Get Android App (IzzyOnDroid)</a>")
             append("</div>")
 
@@ -5417,9 +5417,9 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
                                 }) { Text(Strings.get("protocol_incompatible_website")) }
                                 TextButton(onClick = {
                                     val updateUrl = if (mm.localVersion < mm.remoteVersion)
-                                        "https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop/releases"
+                                        "https://github.com/mu-23/WiFiAudioStreaming/releases"
                                     else
-                                        "https://github.com/marcomorosi06/WiFiAudioStreaming-Android/releases"
+                                        "https://github.com/mu-23/WiFiAudioStreaming/releases"
                                     runCatching { openUrl(updateUrl) }
                                     NetworkHandler_v1.clearProtocolMismatch()
                                 }) { Text(Strings.get("protocol_incompatible_github")) }

@@ -21,6 +21,7 @@ import com.cuscus.wifiaudiostreaming.BuildConfig
 import com.cuscus.wifiaudiostreaming.NetworkManager
 import com.cuscus.wifiaudiostreaming.R
 import com.cuscus.wifiaudiostreaming.StreamAudioFormat
+import com.cuscus.wifiaudiostreaming.StreamingActionReceiver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import rikka.shizuku.Shizuku
@@ -77,6 +78,23 @@ object ShizukuAudioBridgeManager {
             reconnectHandler.removeCallbacks(rebindRunnable)
             Log.i(TAG, "UserService connected: $name")
             val context = appContext ?: return
+
+            if (!desiredRunning || pendingConfig == null) {
+                val stale = service
+                runCatching { stale?.stopBridge() }
+                service = null
+                bindingInProgress = false
+                bound = false
+                reattachingExisting = false
+                runCatching {
+                    Shizuku.unbindUserService(userServiceArgs(context), serviceConnection, true)
+                }.onFailure {
+                    Log.w(TAG, "could not discard late UserService connection", it)
+                }
+                _state.value = State.Idle
+                Log.i(TAG, "discarded late UserService callback after logical stop")
+                return
+            }
 
             val remoteBuild = runCatching { service?.getBuildVersion() ?: -1 }
                 .getOrDefault(-1)
@@ -195,6 +213,7 @@ object ShizukuAudioBridgeManager {
     fun start(context: Context, config: Config) {
         val app = context.applicationContext
         appContext = app
+        StreamingActionReceiver.clearTaskRemovedStop(app)
         desiredRunning = true
         pendingConfig = config
         saveDesiredConfig(app, config)
@@ -220,9 +239,11 @@ object ShizukuAudioBridgeManager {
         runCatching { service?.stopBridge() }
         service = null
 
-        if (bound) {
+        if (bound || bindingInProgress) {
             runCatching {
                 Shizuku.unbindUserService(userServiceArgs(app), serviceConnection, removeUserService)
+            }.onFailure {
+                Log.w(TAG, "could not cancel/remove UserService binding during stop", it)
             }
         }
         bindingInProgress = false
@@ -248,6 +269,9 @@ object ShizukuAudioBridgeManager {
                 pendingConfig = restored
                 Log.i(TAG, "restored Shizuku bridge intent after app-process recreation")
             }
+        }
+        if (!desiredRunning || pendingConfig == null) {
+            return
         }
         ensureListeners()
         if (!isBinderReady()) return
@@ -406,8 +430,45 @@ object ShizukuAudioBridgeManager {
         }.onFailure {
             bindingInProgress = false
             bound = false
-            fail(context, context.getString(R.string.shizuku_error_bind_service, it.message ?: "unknown"))
+            recoverStaleBinding(
+                context,
+                config,
+                context.getString(R.string.shizuku_error_bind_service, it.message ?: "unknown")
+            )
         }
+    }
+
+    private fun recoverStaleBinding(context: Context, config: Config, detail: String) {
+        if (!desiredRunning) return
+        Log.w(TAG, "recoverable UserService binding failure: $detail")
+
+        val app = context.applicationContext
+        val oldService = service
+        service = null
+        bound = false
+        bindingInProgress = false
+        reattachingExisting = false
+
+        runCatching { oldService?.stopBridge() }
+        runCatching {
+            Shizuku.unbindUserService(userServiceArgs(app), serviceConnection, true)
+        }.onFailure {
+            Log.w(TAG, "could not remove stale UserService during recovery", it)
+        }
+
+        _state.value = State.Binding
+        NetworkManager.connectionStatus.value =
+            app.getString(R.string.shizuku_status_starting_bridge)
+
+        reconnectHandler.removeCallbacks(rebindRunnable)
+        reconnectHandler.postDelayed(
+            {
+                if (desiredRunning && pendingConfig != null) {
+                    begin(app, pendingConfig ?: config)
+                }
+            },
+            750L
+        )
     }
 
     private fun startRemote(context: Context, config: Config) {
@@ -426,10 +487,18 @@ object ShizukuAudioBridgeManager {
                 remote.setVolume(NetworkManager.serverVolume.value.coerceIn(0f, 2f))
             }
         } catch (e: RemoteException) {
-            fail(context, context.getString(R.string.shizuku_error_remote_call, e.message ?: "unknown"))
+            recoverStaleBinding(
+                context,
+                config,
+                context.getString(R.string.shizuku_error_remote_call, e.message ?: "unknown")
+            )
             return
         } catch (t: Throwable) {
-            fail(context, context.getString(R.string.shizuku_error_bridge_start, t.message ?: "unknown"))
+            recoverStaleBinding(
+                context,
+                config,
+                context.getString(R.string.shizuku_error_bridge_start, t.message ?: "unknown")
+            )
             return
         }
 

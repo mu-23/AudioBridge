@@ -245,7 +245,7 @@ fun AppContent(
                             modifier = Modifier.size(36.dp)
                         )
                         Spacer(Modifier.width(12.dp))
-                        Text("WiFi Audio Streaming", fontWeight = FontWeight.SemiBold)
+                        Text("AudioBridge", fontWeight = FontWeight.SemiBold)
                     }
                 },
                 actions = {

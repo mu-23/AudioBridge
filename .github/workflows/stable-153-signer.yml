@@ -1,0 +1,126 @@
+name: Build Android with Stable 153 Signer
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Commit, branch, or tag to build"
+        required: true
+        default: "main"
+        type: string
+      version_name:
+        description: "Android versionName"
+        required: true
+        default: "1.2.1-test"
+        type: string
+      artifact_name:
+        description: "Artifact/APK base name"
+        required: true
+        default: "AudioBridge-Android-Test"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout requested source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: |
+            **/*.gradle*
+            **/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Restore stable 153 signing key
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci/lab-debug.keystore
+          key: wfas-audio-bridge-lab-debug-keystore-v2
+          fail-on-cache-miss: true
+
+      - name: Verify stable 153 signer
+        run: |
+          set -euo pipefail
+          KEYSTORE="$GITHUB_WORKSPACE/.ci/lab-debug.keystore"
+          test -f "$KEYSTORE"
+          EXPECTED="4CC4F504BA953B31FFABB2555E3099DA31D94259CF58259B9E6B6FAE19782792"
+          ACTUAL=$(keytool -list -v -keystore "$KEYSTORE" -storepass android -alias androiddebugkey \
+            | awk -F': ' '/SHA256:/ {gsub(":","",$2); print toupper($2); exit}')
+          echo "Stable signer SHA-256: $ACTUAL"
+          test "$ACTUAL" = "$EXPECTED"
+          echo "WFAS_LAB_KEYSTORE=$KEYSTORE" >> "$GITHUB_ENV"
+
+      - name: Detect Android project directory
+        run: |
+          set -euo pipefail
+          if [ -x "$GITHUB_WORKSPACE/android/gradlew" ]; then
+            echo "ANDROID_PROJECT=$GITHUB_WORKSPACE/android" >> "$GITHUB_ENV"
+          elif [ -x "$GITHUB_WORKSPACE/gradlew" ]; then
+            echo "ANDROID_PROJECT=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+          else
+            echo "::error::Android Gradle wrapper not found"
+            exit 1
+          fi
+
+      - name: Install Android 36 SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set test version
+        env:
+          VERSION_NAME: ${{ inputs.version_name }}
+        run: |
+          set -euo pipefail
+          CODE=$((2400000 + GITHUB_RUN_NUMBER))
+          echo "WFAS_VERSION_CODE=$CODE" >> "$GITHUB_ENV"
+          echo "WFAS_VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+
+      - name: Run unit tests
+        run: |
+          cd "$ANDROID_PROJECT"
+          chmod +x gradlew
+          ./gradlew :app:testDebugUnitTest --stacktrace
+
+      - name: Build APK
+        run: |
+          cd "$ANDROID_PROJECT"
+          ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Verify APK certificate and collect
+        env:
+          ARTIFACT_NAME: ${{ inputs.artifact_name }}
+        run: |
+          set -euo pipefail
+          APK="$ANDROID_PROJECT/app/build/outputs/apk/debug/app-debug.apk"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          EXPECTED="4cc4f504ba953b31ffabb2555e3099da31d94259cf58259b9e6b6fae19782792"
+          ACTUAL=$("$APKSIGNER" verify --print-certs "$APK" \
+            | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}')
+          echo "APK signer SHA-256: $ACTUAL"
+          test "$ACTUAL" = "$EXPECTED"
+          OUT="$GITHUB_WORKSPACE/${ARTIFACT_NAME}.apk"
+          cp "$APK" "$OUT"
+          echo "SIGNED_APK=$OUT" >> "$GITHUB_ENV"
+
+      - name: Upload 153-signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ${{ env.SIGNED_APK }}
+          if-no-files-found: error

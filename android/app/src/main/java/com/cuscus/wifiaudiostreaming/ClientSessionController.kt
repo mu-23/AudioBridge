@@ -61,6 +61,7 @@ object ClientSessionController {
     fun connect(context: Context, serverInfo: ServerInfo, presharedKey: String? = null) {
         val app = context.applicationContext
         appContext = app
+        StreamingActionReceiver.clearTaskRemovedStop(app)
 
         generation += 1
         val token = generation

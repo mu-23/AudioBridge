@@ -514,7 +514,7 @@ class MainActivity : AppCompatActivity() {
                     sampleRate = params.sampleRate,
                     channels = if (params.channelConfig.equals("STEREO", ignoreCase = true)) 2 else 1,
                     packetBytes = settings?.maxPayloadBytes ?: 512,
-                    keepPlayingOnDevice = true,
+                    keepPlayingOnDevice = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
                     networkInterfaceName = params.networkInterface,
                     persistAfterClient = true
                 )

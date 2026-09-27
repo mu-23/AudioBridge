@@ -1,6 +1,6 @@
 <div align="center">
 
-# WiFi Audio Streaming
+# AudioBridge
 
 **Android + Desktop 局域网低延迟音频串流**
 

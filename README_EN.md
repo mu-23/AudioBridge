@@ -1,4 +1,4 @@
-# WiFi Audio Streaming
+# AudioBridge
 
 Unified Android + Desktop low-latency LAN audio streaming project.
 

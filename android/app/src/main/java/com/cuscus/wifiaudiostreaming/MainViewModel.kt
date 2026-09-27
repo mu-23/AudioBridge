@@ -257,6 +257,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleMode(isServerMode: Boolean) {
         _isServer.value = isServerMode
         if (isServerMode) {
+            RoleSelectionGate.selectSender()
+        } else {
+            RoleSelectionGate.selectReceiver()
+        }
+        if (isServerMode) {
             NetworkManager.stopListeningForDevices()
             clearDiscoveredDevices()
         }
@@ -709,6 +714,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // controller owns reconnects; recreating this ViewModel must not cancel them.
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun startClient(serverInfo: ServerInfo, presharedKey: String? = null) {
+        RoleSelectionGate.selectReceiver()
         ClientSessionController.connect(
             context = getApplication(),
             serverInfo = serverInfo,

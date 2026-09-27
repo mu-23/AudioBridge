@@ -1,0 +1,51 @@
+name: Publish Android test 1.3.1 test 4
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/publish-test-1.3.1-test.4.yml"
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download exact Stable-153-signed test artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          gh run download 36322052613 \
+            --repo "${{ github.repository }}" \
+            --name "AudioBridge-Android-Test-1.3.1" \
+            --dir release-assets
+          test -f release-assets/AudioBridge-Android-Test-1.3.1-test.4.apk
+
+      - name: Create test tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! gh api "repos/$REPO/git/ref/tags/v1.3.1-test.4" >/dev/null 2>&1; then
+            gh api --method POST "repos/$REPO/git/refs" \
+              -f ref="refs/tags/v1.3.1-test.4" \
+              -f sha="3449cf3de4cf535fe1d94d55b2d7fef3bb878060"
+          fi
+
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create v1.3.1-test.4 \
+            release-assets/AudioBridge-Android-Test-1.3.1-test.4.apk \
+            --repo "${{ github.repository }}" \
+            --title "AudioBridge v1.3.1-test.4" \
+            --notes "Test build signed with the exact Stable #153 signing identity. Auto-connect is now gated by explicit role selection and only runs after Receive is chosen. Auto-connect no longer creates its own NetworkManager client session; it hands the discovered target to ClientSessionController so manual connect, auto-connect, silence handling and reconnect use one lifecycle. Receiver sticky services also refuse to resume until Receive has been explicitly selected. Includes the task-removal recovery and non-focus-stealing overlay volume slider fixes from test.3. Stable #153 remains the latest stable release." \
+            --prerelease

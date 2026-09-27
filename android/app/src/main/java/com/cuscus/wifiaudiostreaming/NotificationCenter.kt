@@ -198,7 +198,6 @@ object NotificationCenter {
             CHANNEL_SERVER,
             if (muted) R.drawable.ic_notif_volume_off else R.drawable.ic_notif_stream
         )
-            .setContentIntent(volumeControl(context, VolumeControlActivity.MODE_SERVER))
             .setContentTitle("WFAS · Shizuku Audio Bridge")
             .setContentText(status)
             .setSubText(volumeLabel(context, percent))

@@ -1,10 +1,10 @@
 <resources>
-    <string name="app_name">WiFi Audio Stream</string>
+    <string name="app_name">AudioBridge</string>
     <string name="connection_status_connected">Connesso</string>
     <string name="connection_status_error">Errore di connessione</string>
     <string name="connection_status_waiting">Aspettando…</string>
 
-    <string name="onboarding_welcome_title">Benvenuto in WiFi Audio Streaming!</string>
+    <string name="onboarding_welcome_title">Benvenuto in AudioBridge!</string>
     <string name="onboarding_welcome_subtitle">Trasforma il tuo telefono in un altoparlante WiFi per il tuo PC. Per iniziare, hai bisogno del software per desktop.</string>
     <string name="onboarding_download_title">Scarica l\'applicazione per Desktop</string>
     <string name="onboarding_download_link">Visita il-tuo-sito.com/wifiaudio</string>
@@ -78,7 +78,7 @@
     <string name="sec_ask">Approvazione</string>
     <string name="mic_sends">Invia il microfono</string>
     <string name="mic_wants">Accetta il tuo microfono</string>
-    <string name="donation_title">Ti piace WiFi Audio Streaming?</string>
+    <string name="donation_title">Ti piace AudioBridge?</string>
     <string name="donation_body">Quest\'app è gratuita e senza pubblicità, fatta da una persona sola nel tempo libero. Se ti è utile, un piccolo contributo su Ko-fi aiuta a tenerla viva. Nessun obbligo: continui a usare tutto comunque.</string>
     <string name="donation_support">Supporta su Ko-fi ☕</string>
     <string name="donation_later">Forse più tardi</string>
@@ -229,7 +229,7 @@
     <string name="onboarding_protocols_subtitle">Cinque modi per inviare lo stesso audio. Scegli quello adatto a ciò che hai già.</string>
 
     <string name="onboarding_proto1_title">WFAS (Nativo)</string>
-    <string name="onboarding_proto1_desc">Richiede l\'app WiFi Audio Streaming su entrambi i dispositivi. Offre la migliore sincronizzazione, ideale per giocare e guardare video.</string>
+    <string name="onboarding_proto1_desc">Richiede l\'app AudioBridge su entrambi i dispositivi. Offre la migliore sincronizzazione, ideale per giocare e guardare video.</string>
 
     <string name="onboarding_proto2_title">Flusso RTP</string>
     <string name="onboarding_proto2_desc">Trasmetti a lettori multimediali esterni come VLC, Kodi o FFplay. Salva il file SDP dall\'app e aprilo con il tuo player preferito.</string>

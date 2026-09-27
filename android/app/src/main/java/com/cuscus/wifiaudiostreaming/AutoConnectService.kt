@@ -96,7 +96,9 @@ class AutoConnectService : Service() {
 
     @SuppressLint("MissingPermission")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (StreamingActionReceiver.wasRecentlyTaskRemoved(this)) {
+        if (StreamingActionReceiver.wasRecentlyTaskRemoved(this) ||
+            !RoleSelectionGate.isReceiverSelected()
+        ) {
             stopSelf()
             return START_NOT_STICKY
         }
@@ -113,8 +115,11 @@ class AutoConnectService : Service() {
             while (isActive) {
                 val prefs = settingsDataStore.settingsFlow.first()
 
-                if (!prefs.autoConnectEnabled) {
-                    Log.d("AutoConnect", "Auto-connect disabilitato. Arresto servizio.")
+                if (!prefs.autoConnectEnabled || !RoleSelectionGate.isReceiverSelected()) {
+                    Log.d(
+                        "AutoConnect",
+                        "Auto-connect stopped: disabled or receiver role no longer selected."
+                    )
                     stopSelf()
                     return@launch
                 }
@@ -159,7 +164,12 @@ class AutoConnectService : Service() {
                     val packet = DatagramPacket(buffer, buffer.size)
                     val localIp = NetworkManager.getLocalIpAddress(applicationContext)
 
-                    while (isActive && !NetworkManager.isStreamingCurrent.value && !isConnecting) {
+                    while (
+                        isActive &&
+                        RoleSelectionGate.isReceiverSelected() &&
+                        !NetworkManager.isStreamingCurrent.value &&
+                        !isConnecting
+                    ) {
                         try {
                             socket.receive(packet)
                             val message = String(packet.data, 0, packet.length).trim()
@@ -229,55 +239,37 @@ class AutoConnectService : Service() {
                 }
 
                 if (targetServer != null) {
+                    if (!RoleSelectionGate.isReceiverSelected()) {
+                        stopSelf()
+                        return@launch
+                    }
+
                     isConnecting = true
                     NetworkManager.isServerStreaming = false
 
-                    // The per-entry key, resolved from the Keystore-backed store at
-                    // the moment of use, pre-seeds the client so a KEY-mode server
-                    // authenticates without a prompt. No key ref -> empty, and the
-                    // server may well be OFF/ASK. Not an invite, so clear that flag.
+                    // Auto-connect only discovers/selects a target. The actual
+                    // session is owned by the same controller used by manual
+                    // receiver connections, so silence, reconnect and service
+                    // recreation all share one state machine.
                     val resolvedKey = matchedEntry?.keyRef
                         ?.let { SecretStore.get(applicationContext).getAutoConnectKey(it) }
-                    NetworkManager.clientPresharedKey = resolvedKey.orEmpty()
-                    NetworkManager.clientKeyFromInvite = false
 
                     try {
-                        Log.d("AutoConnect", "Avvio Service per Client a ${targetServer.ip}")
-                        val clientIntent = Intent(applicationContext, ClientService::class.java)
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            applicationContext.startForegroundService(clientIntent)
-                        } else {
-                            applicationContext.startService(clientIntent)
-                        }
-
-                        NetworkManager.startClient(
+                        Log.d(
+                            "AutoConnect",
+                            "Handoff to ClientSessionController for ${targetServer.ip}:${targetServer.port}"
+                        )
+                        ClientSessionController.connect(
                             context = applicationContext,
                             serverInfo = targetServer,
-                            sampleRate = prefs.sampleRate,
-                            channelConfig = prefs.channelConfig,
-                            bufferSize = prefs.bufferSize,
-                            sendMicrophone = prefs.sendClientMicrophone,
-                            micPort = prefs.micPort,
-                            networkInterfaceName = prefs.networkInterface,
-                            connectionSoundEnabled = prefs.connectionSoundEnabled,
-                            disconnectionSoundEnabled = prefs.disconnectionSoundEnabled,
-                            onServerDisconnected = {
-                                Log.d("AutoConnect", "Callback disconnessione ricevuta. Reset dello stato.")
-                                NetworkManager.isStreamingCurrent.value = false
-                                val stopIntent = Intent(applicationContext, ClientService::class.java)
-                                applicationContext.stopService(stopIntent)
-                            }
+                            presharedKey = resolvedKey
                         )
+                        stopSelf()
+                        return@launch
                     } catch (e: Exception) {
-                        NetworkManager.isStreamingCurrent.value = false
-                        val stopIntent = Intent(applicationContext, ClientService::class.java)
-                        applicationContext.stopService(stopIntent)
-                    } finally {
+                        Log.e("AutoConnect", "Unable to hand off auto-connect session", e)
                         isConnecting = false
-                        while (NetworkManager.isStreamingCurrent.value) {
-                            delay(5000)
-                        }
-                        Log.d("AutoConnect", "Disconnesso. Ripresa del loop di ascolto.")
+                        delay(2000)
                     }
                 }
             }

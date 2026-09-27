@@ -42,6 +42,10 @@ class ShizukuBridgeHostService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (StreamingActionReceiver.wasRecentlyTaskRemoved(this)) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         NotificationCenter.ensureChannels(this)
         startForeground(
             NotificationCenter.ID_SERVER,
@@ -136,7 +140,7 @@ class ShizukuBridgeHostService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        StreamingActionReceiver.stopEverything(this)
+        StreamingActionReceiver.handleTaskRemoved(this)
         stopSelf()
         super.onTaskRemoved(rootIntent)
     }

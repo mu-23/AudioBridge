@@ -49,22 +49,16 @@ jobs:
           path: .ci/lab-debug.keystore
           key: wfas-audio-bridge-lab-debug-keystore-v2
 
-      - name: Ensure stable Android signing key
+      - name: Require AudioBridge signing key
         run: |
           set -euo pipefail
-          mkdir -p "$GITHUB_WORKSPACE/.ci"
-          if [ ! -f "$GITHUB_WORKSPACE/.ci/lab-debug.keystore" ]; then
-            keytool -genkeypair \
-              -keystore "$GITHUB_WORKSPACE/.ci/lab-debug.keystore" \
-              -storepass android \
-              -alias androiddebugkey \
-              -keypass android \
-              -dname "CN=WFAS Audio Bridge Lab,O=WFAS,C=US" \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000
+          KEYSTORE="$GITHUB_WORKSPACE/.ci/lab-debug.keystore"
+          if [ ! -f "$KEYSTORE" ]; then
+            echo "::error::AudioBridge signing key is unavailable. Refusing to generate a new key because that would break Android in-place upgrades."
+            exit 1
           fi
-          echo "WFAS_LAB_KEYSTORE=$GITHUB_WORKSPACE/.ci/lab-debug.keystore" >> "$GITHUB_ENV"
+          echo "WFAS_LAB_KEYSTORE=$KEYSTORE" >> "$GITHUB_ENV"
+          keytool -list -v -keystore "$KEYSTORE" -storepass android -alias androiddebugkey | grep -E "SHA256:"
 
       - name: Install Android 36 SDK
         run: |

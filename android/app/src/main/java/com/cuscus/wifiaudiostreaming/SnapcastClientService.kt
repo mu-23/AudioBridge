@@ -53,6 +53,11 @@ class SnapcastClientService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (StreamingActionReceiver.wasRecentlyTaskRemoved(this)) {
+            runCatching { SnapcastReceiver.disconnect() }
+            stopSelf()
+            return START_NOT_STICKY
+        }
         /*
          * startForeground() prima di ogni altra cosa, senza condizioni.
          *

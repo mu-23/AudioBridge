@@ -284,7 +284,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Deb, TargetFormat.Rpm)
 
-            packageName = "WiFi Audio Streaming"
+            packageName = "AudioBridge"
             packageVersion = appVersion
 
             modules(
@@ -356,7 +356,7 @@ val packageZip by tasks.registering(Zip::class) {
     dependsOn("createReleaseDistributable")
     from(portableAppDir)
     destinationDirectory.set(portableOutDir)
-    archiveFileName.set("WiFi-Audio-Streaming-$displayVersion-$portableLabel.zip")
+    archiveFileName.set("AudioBridge-$displayVersion-$portableLabel.zip")
 }
 
 val packageTarGz by tasks.registering(Tar::class) {
@@ -365,7 +365,7 @@ val packageTarGz by tasks.registering(Tar::class) {
     dependsOn("createReleaseDistributable")
     from(portableAppDir)
     destinationDirectory.set(portableOutDir)
-    archiveFileName.set("WiFi-Audio-Streaming-$displayVersion-$portableLabel.tar.gz")
+    archiveFileName.set("AudioBridge-$displayVersion-$portableLabel.tar.gz")
     compression = Compression.GZIP
 }
 

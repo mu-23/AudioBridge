@@ -388,7 +388,7 @@ object AutostartManager {
         val exePath = getExecutablePath()
         if (exePath.isEmpty()) return "Error: Executable path not found."
 
-        val appName = "WiFiAudioStreaming"
+        val appName = "AudioBridge"
         // Older builds registered the Run value as "WiFiAudioStreamer". Disabling
         // autostart deletes that name too, otherwise a machine set up before the
         // rename would keep launching on boot from a value the new code never
@@ -434,7 +434,7 @@ object AutostartManager {
                 }
                 null
             } else {
-                val desktopContent = "[Desktop Entry]\nType=Application\nExec=\"$exePath\"\nHidden=false\nNoDisplay=false\nTerminal=false\nX-GNOME-Autostart-enabled=true\nName=WiFi Audio Streaming\nComment=Start WiFi Audio Streaming on login"
+                val desktopContent = "[Desktop Entry]\nType=Application\nExec=\"$exePath\"\nHidden=false\nNoDisplay=false\nTerminal=false\nX-GNOME-Autostart-enabled=true\nName=AudioBridge\nComment=Start AudioBridge on login"
                 val dir = File(System.getProperty("user.home"), ".config/autostart")
                 val file = File(dir, "wifiaudiostreaming.desktop")
                 if (enable) {
@@ -1869,7 +1869,7 @@ object NetworkHandler_v1 {
         val htmlPage = buildString {
             append("<!DOCTYPE html><html lang=\"en\"><head>")
             append("<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">")
-            append("<title>WiFi Audio Streaming</title><style>")
+            append("<title>AudioBridge</title><style>")
             // Nuovo CSS unificato
             append(":root { --bg: #0f0f0f; --surface: #1e1e1e; --primary: #BB86FC; --text: #e0e0e0; --text-mut: #888; }")
             append("*{box-sizing:border-box;margin:0;padding:0}")
@@ -1892,14 +1892,14 @@ object NetworkHandler_v1 {
             // Struttura HTML
             append("<div class=\"card\">")
             append("<div class=\"icon\">🎧</div>")
-            append("<h1>WiFi Audio Streaming</h1>")
+            append("<h1>AudioBridge</h1>")
             append("<p class=\"sub\" id=\"codec-label\">Connecting&hellip;</p>")
             append("<p class=\"status\" id=\"st\"><span class=\"dot\"></span>Live</p>")
 
             // Link e Ko-fi
             append("<div class=\"links\">")
-            append("<a href=\"https://github.com/mu-23/WiFiAudioStreaming\" target=\"_blank\">💻 Get Desktop App (GitHub)</a>")
-            append("<a href=\"https://github.com/mu-23/WiFiAudioStreaming\" target=\"_blank\">📱 Get Android App (GitHub)</a>")
+            append("<a href=\"https://github.com/mu-23/AudioBridge\" target=\"_blank\">💻 Get Desktop App (GitHub)</a>")
+            append("<a href=\"https://github.com/mu-23/AudioBridge\" target=\"_blank\">📱 Get Android App (GitHub)</a>")
             append("<a href=\"https://apt.izzysoft.de/fdroid/index/apk/com.cuscus.wifiaudiostreaming\" target=\"_blank\">📲 Get Android App (IzzyOnDroid)</a>")
             append("</div>")
 
@@ -4652,7 +4652,7 @@ private fun runInteractiveSetup(isHeadless: Boolean): SetupAction {
     }.getOrNull() ?: "")
 
     println()
-    println("  WiFi Audio Streaming${if (ver.isNotEmpty()) " $ver" else ""}")
+    println("  AudioBridge${if (ver.isNotEmpty()) " $ver" else ""}")
     println()
 
     data class Option(val label: String, val action: SetupAction)
@@ -5139,7 +5139,7 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
             runCatching {
                 trayState.sendNotification(
                     Notification(
-                        title = "WiFi Audio Streaming",
+                        title = "AudioBridge",
                         message = Strings.get("tray_running_in_background"),
                         type = Notification.Type.Info
                     )
@@ -5169,8 +5169,8 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
         Tray(
             icon = trayIconLive,
             state = trayState,
-            tooltip = if (capturing) "WiFi Audio Streaming - ${CaptureMonitor.summary()}"
-            else "WiFi Audio Streaming",
+            tooltip = if (capturing) "AudioBridge - ${CaptureMonitor.summary()}"
+            else "AudioBridge",
             onAction = showAndRaise,
             menu = {
                 if (capturing) {
@@ -5201,7 +5201,7 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
             val trayMode = cliArgs.trayMode ?: appSettings.linuxTray
             AppDebug.log("[TRAY] ${LinuxTray.describe(trayMode)}")
 
-            val created = LinuxTray.install(trayMode, iconUrl, "WiFi Audio Streaming") { linuxTray ->
+            val created = LinuxTray.install(trayMode, iconUrl, "AudioBridge") { linuxTray ->
                 val toggleItem = dorkbox.systemTray.MenuItem(Strings.get("tray_show_window"))
 
                 toggleItem.setCallback {
@@ -5244,7 +5244,7 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
         state      = windowState,
         visible    = isWindowVisible,
         undecorated = false,
-        title      = "WiFi Audio Streaming",
+        title      = "AudioBridge",
         icon       = trayIcon
     ) {
         // Enforce a minimum window size so content is always reachable on low-res displays.
@@ -5417,9 +5417,9 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
                                 }) { Text(Strings.get("protocol_incompatible_website")) }
                                 TextButton(onClick = {
                                     val updateUrl = if (mm.localVersion < mm.remoteVersion)
-                                        "https://github.com/mu-23/WiFiAudioStreaming/releases"
+                                        "https://github.com/mu-23/AudioBridge/releases"
                                     else
-                                        "https://github.com/mu-23/WiFiAudioStreaming/releases"
+                                        "https://github.com/mu-23/AudioBridge/releases"
                                     runCatching { openUrl(updateUrl) }
                                     NetworkHandler_v1.clearProtocolMismatch()
                                 }) { Text(Strings.get("protocol_incompatible_github")) }

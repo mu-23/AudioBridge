@@ -47,7 +47,9 @@ object Strings {
         val loader = Strings::class.java.classLoader
         val stream = loader.getResourceAsStream("version.properties") ?: return@lazy "?"
         val vProps = Properties().apply { load(InputStreamReader(stream, Charsets.UTF_8)) }
-        displayVersion(vProps.getProperty("app.version", "?"))
+        vProps.getProperty("app.display.version")
+            ?.takeIf { it.isNotBlank() }
+            ?: displayVersion(vProps.getProperty("app.version", "?"))
     }
 }
 

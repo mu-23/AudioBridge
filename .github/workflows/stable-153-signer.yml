@@ -72,9 +72,9 @@ jobs:
       - name: Detect Android project directory
         run: |
           set -euo pipefail
-          if [ -x "$GITHUB_WORKSPACE/android/gradlew" ]; then
+          if [ -f "$GITHUB_WORKSPACE/android/gradlew" ]; then
             echo "ANDROID_PROJECT=$GITHUB_WORKSPACE/android" >> "$GITHUB_ENV"
-          elif [ -x "$GITHUB_WORKSPACE/gradlew" ]; then
+          elif [ -f "$GITHUB_WORKSPACE/gradlew" ]; then
             echo "ANDROID_PROJECT=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
           else
             echo "::error::Android Gradle wrapper not found"

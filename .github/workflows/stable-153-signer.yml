@@ -1,4 +1,5 @@
 name: Build Android with Stable 153 Signer
+# Builds the latest requested source while preserving build #153 signing identity.
 
 on:
   push:

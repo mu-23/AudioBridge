@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WiFi Audio Streaming"
+rootProject.name = "AudioBridge"
 include(":app")

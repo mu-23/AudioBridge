@@ -1,0 +1,1506 @@
+/*
+ * Copyright (c) 2026 Marco Morosi
+ *
+ * Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
+ * the European Commission - subsequent versions of the EUPL (the "Licence");
+ * You may not use this work except in compliance with the Licence.
+ * You may obtain a copy of the Licence at:
+ *
+ * https://joinup.ec.europa.eu/software/page/eupl
+ */
+
+data class HelpEntry(
+    val syntax: String,
+    val brief: String,
+    val default: String? = null,
+    val detail: String? = null,
+    val tokens: List<String> = emptyList()
+)
+
+data class HelpBlock(
+    val heading: String? = null,
+    val intro: String? = null,
+    val entries: List<HelpEntry> = emptyList(),
+    val outro: String? = null
+)
+
+data class HelpTopic(
+    val key: String,
+    val title: String,
+    val tagline: String,
+    val aliases: List<String> = emptyList(),
+    val intro: String? = null,
+    val blocks: List<HelpBlock> = emptyList(),
+    val examples: List<Pair<String, String>> = emptyList(),
+    val seeAlso: List<String> = emptyList()
+)
+
+object CliHelpModel {
+
+    const val TAGLINE = "Stream audio over your local network."
+
+    val QUICK: List<Pair<String, String>> = listOf(
+        "wfas --server"        to "stream this machine's audio",
+        "wfas --client"        to "play audio from a server",
+        "wfas --gui"           to "open the desktop app",
+        "wfas --connect <ip>"  to "join a specific server",
+        "wfas rtp listen <src>" to "play someone else's RTP stream",
+        "wfas snapcast listen"  to "join a Snapcast multiroom system",
+        "wfas snapcast mixer"   to "play and control a Snapcast system"
+    )
+
+    val SYNOPSIS: List<String> = listOf(
+        "wfas [--gui | --cli] [--mode server|client|discover|rtp|snapcast] [OPTIONS]",
+        "wfas rtp [listen|inspect|sdp|sources|save|forget] [source] [OPTIONS]",
+        "wfas snapcast <command> [server|client|group] [OPTIONS]",
+        "wfas control <command>",
+        "wfas config <command>",
+        "wfas devices [--json]",
+        "wfas pair <command>",
+        "wfas firewall <command>",
+        "wfas --help [<topic> | all]"
+    )
+
+    val LINKS: List<Pair<String, String>> = listOf(
+        "Desktop source"   to "https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop",
+        "Android app"      to "https://github.com/marcomorosi06/WiFiAudioStreaming-Android",
+        "WFAS v2 protocol" to "https://github.com/marcomorosi06/wfas-protocol"
+    )
+
+    private val START = HelpTopic(
+        key = "start",
+        title = "Getting started",
+        tagline = "modes, GUI vs CLI, discovery",
+        aliases = listOf("basics", "modes", "gui"),
+        intro = "One executable serves three roles: it captures this machine's audio and sends it " +
+                "out (server), it receives audio from another machine and plays it (client), or it " +
+                "just scans the network to see who is already streaming (discover). Without any " +
+                "flag wfas decides on its own: launched from a terminal it prints a short hint, " +
+                "launched by a double click it opens the desktop app.",
+        blocks = listOf(
+            HelpBlock(
+                heading = "Entry point",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "(no flags)",
+                        brief = "From a terminal, print a short hint. Otherwise open the GUI."
+                    ),
+                    HelpEntry(
+                        syntax = "--gui",
+                        brief = "Open the desktop app.",
+                        tokens = listOf("--gui"),
+                        detail = "Can be combined with a mode to open the window and start straight " +
+                                "away, as in 'wfas --gui --mode server --multicast'."
+                    ),
+                    HelpEntry(
+                        syntax = "--cli",
+                        brief = "Stay in the terminal. Runs an audio server unless another mode is given.",
+                        tokens = listOf("--cli")
+                    ),
+                    HelpEntry(
+                        syntax = "--no-tray",
+                        brief = "Start the GUI without the Linux tray icon.",
+                        tokens = listOf("--no-tray"),
+                        detail = "Use this if the app segfaults inside libgtk-3 on launch; the tray is " +
+                                "the only part that touches GTK. Same as WFAS_NO_TRAY=1, or " +
+                                "'wfas config set ui.linuxTray OFF' to make it permanent."
+                    ),
+                    HelpEntry(
+                        syntax = "--tray <auto|on|off>",
+                        brief = "Override the tray decision for this run.",
+                        default = "auto",
+                        tokens = listOf("--tray"),
+                        detail = "auto looks for a StatusNotifierItem host on the session bus, which " +
+                                "is what KDE Plasma provides on both X11 and Wayland, and falls back " +
+                                "to the GTK status icon on X11. Use on to try anyway when the probe " +
+                                "cannot reach the bus. If the icon never appears on Wayland the usual " +
+                                "cause is a missing AppIndicator library: install libappindicator-gtk3 " +
+                                "on Fedora, libayatana-appindicator3-1 on Debian and Ubuntu."
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Modes",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--server",
+                        brief = "Start as audio source. Shorthand for --mode server.",
+                        tokens = listOf("--server")
+                    ),
+                    HelpEntry(
+                        syntax = "--client",
+                        brief = "Start as audio receiver. Shorthand for --mode client.",
+                        tokens = listOf("--client")
+                    ),
+                    HelpEntry(
+                        syntax = "--mode <m>",
+                        brief = "server | client | discover | rtp | snapcast",
+                        tokens = listOf("--mode"),
+                        detail = "server    capture this machine's audio and serve it\n" +
+                                "client    receive audio from a server and play it\n" +
+                                "discover  scan the network for active servers, then exit\n" +
+                                "rtp       listen to an RTP stream, as 'wfas rtp listen' does\n" +
+                                "snapcast  join a Snapcast server, as 'wfas snapcast listen' does\n" +
+                                "\n" +
+                                "The last two have no counterpart in the window, so --gui does not " +
+                                "apply to them. They are described under 'receive'."
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Discovery",
+                intro = "Discovery is passive: servers announce themselves on the multicast group, " +
+                        "so nothing is probed or port-scanned. Each entry reports the transport it " +
+                        "was seen on and its address family.",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--watch",
+                        brief = "Keep scanning and update the list live instead of exiting after one pass.",
+                        tokens = listOf("--watch"),
+                        detail = "It applies to discovery and to 'wfas pair invite', the two views " +
+                                "that would otherwise print once and exit. Anywhere else there is " +
+                                "nothing to keep open, so wfas refuses the flag rather than " +
+                                "ignoring it and falling back to starting a server."
+                    )
+                )
+            )
+        ),
+        examples = listOf(
+            "wfas --server"                   to "start a server, unauthenticated and in the clear",
+            "wfas --client"                   to "receive from the first server found",
+            "wfas --mode discover"            to "list the servers on this network",
+            "wfas --mode discover --watch"    to "keep the list updating",
+            "wfas --mode discover --json"     to "scan and output JSON",
+            "wfas --gui --mode server --multicast" to "open the GUI and start serving immediately"
+        ),
+        seeAlso = listOf("server", "client", "network")
+    )
+
+    private val SERVER = HelpTopic(
+        key = "server",
+        title = "Server options",
+        tagline = "ports, capture engine, session, SDP",
+        aliases = listOf("source", "send"),
+        intro = "The server captures what this machine is playing and sends it out over the native " +
+                "WFAS protocol. Everything here is about that native stream; the extra protocols " +
+                "that can run alongside it live under 'Streaming protocols'.",
+        blocks = listOf(
+            HelpBlock(
+                heading = "Ports and delivery",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--port <n>",
+                        brief = "WFAS streaming port.",
+                        default = "9090",
+                        tokens = listOf("--port")
+                    ),
+                    HelpEntry(
+                        syntax = "--mic-port <n>",
+                        brief = "Port the microphone return channel comes back on.",
+                        default = "9092",
+                        tokens = listOf("--mic-port")
+                    ),
+                    HelpEntry(
+                        syntax = "--multicast",
+                        brief = "Serve to every listener on the group instead of one unicast peer.",
+                        tokens = listOf("--multicast"),
+                        detail = "Implied by --rtp, --http, --dlna and --snapcast. Note that " +
+                                "--auth-mode applies to unicast only."
+                    ),
+                    HelpEntry(
+                        syntax = "--interface <name>",
+                        brief = "Network interface to bind and announce on.",
+                        default = "Auto",
+                        tokens = listOf("--interface")
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Session lifetime",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--persist",
+                        brief = "Keep the server up when a client disconnects, waiting for the next one.",
+                        default = "off: a unicast server exits with its client",
+                        tokens = listOf("--persist"),
+                        detail = "A unicast server normally serves one session and exits when that " +
+                                "client leaves. With --persist the disconnect ends the session only: " +
+                                "the port stays bound, discovery starts announcing again and the next " +
+                                "client is served without restarting anything. Made for headless and " +
+                                "systemd use, where Restart=always would otherwise bounce the whole " +
+                                "process after every normal disconnect. The server then ends only " +
+                                "when you end it: q on the terminal, Ctrl-C, or systemctl stop. " +
+                                "Multicast has no per-client session and already behaves this way, " +
+                                "so there the flag changes nothing.\n" +
+                                "To make it the default: 'wfas config set server.persist true', or " +
+                                "the switch in Settings > Startup & window. The flag then only " +
+                                "matters for a run where the setting is off."
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Capture engine",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--no-mute-render",
+                        brief = "Keep playing on this machine's speakers while streaming.",
+                        default = "off: local playback is muted for the session",
+                        tokens = listOf("--no-mute-render"),
+                        detail = "While capturing, the server mutes local playback so the same audio " +
+                                "is not heard twice, once from the speakers here and once from the " +
+                                "client. What it mutes is the render side, not the capture: the " +
+                                "WASAPI render endpoint on Windows, the default PulseAudio/PipeWire " +
+                                "sink on Linux, the system volume on macOS. The previous state is " +
+                                "restored when the server stops. Pass --no-mute-render to leave it " +
+                                "alone and hear the audio in both places, e.g. headphones on this " +
+                                "machine and earbuds on the phone. Native engine only: with " +
+                                "--legacy-engine capture goes through a virtual cable, which takes " +
+                                "the audio off the speakers by itself.\n" +
+                                "To make it the default: 'wfas config set server.muteRender false', " +
+                                "or the switch in Settings > Audio Quality. The flag then only " +
+                                "matters for a run where the setting is on."
+                    ),
+                    HelpEntry(
+                        syntax = "--legacy-engine",
+                        brief = "Use the legacy FFmpeg grabber instead of the native C audio engine.",
+                        tokens = listOf("--legacy-engine", "--no-native-engine"),
+                        detail = "The native engine is the default on all platforms:\n" +
+                                "  Windows  WASAPI loopback (no virtual driver needed)\n" +
+                                "  macOS    ScreenCaptureKit\n" +
+                                "  Linux    PulseAudio/PipeWire via dlopen\n" +
+                                "Use --legacy-engine on Linux if PulseAudio is unavailable, or for " +
+                                "compatibility with older setups. Alias: --no-native-engine."
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Session descriptor",
+                intro = "An SDP file describes the stream well enough for VLC, ffplay or any RTP " +
+                        "receiver to open it. Only meaningful together with --rtp.",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--sdp",
+                        brief = "Print stream.sdp to stdout when the server starts.",
+                        tokens = listOf("--sdp")
+                    ),
+                    HelpEntry(
+                        syntax = "--sdp-out <path>",
+                        brief = "Write stream.sdp to a file, for example /tmp/stream.sdp.",
+                        tokens = listOf("--sdp-out")
+                    )
+                )
+            )
+        ),
+        examples = listOf(
+            "wfas --server"                  to "start with the saved audio and network settings",
+            "wfas --server --port 9500"      to "serve on a non-default port",
+            "wfas --server --multicast"      to "serve every listener on the group",
+            "wfas --mode server --rtp --sdp" to "server plus RTP, printing the SDP",
+            "wfas --server --persist"        to "stay up across client disconnects",
+            "wfas --server --no-mute-render" to "keep hearing the audio on this machine too",
+            "wfas --server --legacy-engine"  to "fall back to the FFmpeg grabber"
+        ),
+        seeAlso = listOf("protocols", "security", "network")
+    )
+
+    private val CLIENT = HelpTopic(
+        key = "client",
+        title = "Client options",
+        tagline = "output device, volume, microphone",
+        aliases = listOf("receive", "mic", "devices", "audio"),
+        intro = "The client receives a WFAS stream and plays it on a local device. With no --connect " +
+                "it discovers a server by itself and joins the first one it sees.",
+        blocks = listOf(
+            HelpBlock(
+                heading = "Connection and output",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--connect <ip>",
+                        brief = "Server address to connect to. Implies client mode.",
+                        default = "auto-discover",
+                        tokens = listOf("--connect")
+                    ),
+                    HelpEntry(
+                        syntax = "--output <name>",
+                        brief = "Audio output device name.",
+                        default = "system default",
+                        tokens = listOf("--output"),
+                        detail = "Matching is partial and case-insensitive, so a fragment such as " +
+                                "'Loopback' is enough. Run 'wfas devices' to see the exact names " +
+                                "this system reports."
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Playback",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--volume <0-100>",
+                        brief = "Initial volume percentage.",
+                        default = "100",
+                        tokens = listOf("--volume")
+                    ),
+                    HelpEntry(
+                        syntax = "--mute",
+                        brief = "Start muted.",
+                        tokens = listOf("--mute")
+                    ),
+                    HelpEntry(
+                        syntax = "--latency <ms>",
+                        brief = "Jitter buffer used on the Wi-Fi link.",
+                        default = "120, range 0-5000",
+                        tokens = listOf("--latency"),
+                        detail = "Larger values survive a noisier network, smaller ones cut the delay. " +
+                                "The USB buffer is separate and is set by --usb-latency. Persists as " +
+                                "audio.latencyMs when saved with 'wfas config set'."
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Microphone return channel",
+                intro = "Sends the client's microphone back to the server (talkback), independent of " +
+                        "the main server-to-client audio stream.",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--mic",
+                        brief = "Enable the microphone return channel.",
+                        tokens = listOf("--mic")
+                    ),
+                    HelpEntry(
+                        syntax = "--mic-input <name>",
+                        brief = "Microphone device name. Same partial matching as --output.",
+                        tokens = listOf("--mic-input")
+                    ),
+                    HelpEntry(
+                        syntax = "--mic-routing <m>",
+                        brief = "mix | virtual | off",
+                        default = "mix when --mic is given",
+                        tokens = listOf("--mic-routing"),
+                        detail = "mix      blend the mic into the server's captured audio\n" +
+                                "virtual  expose the mic on the server as a virtual device\n" +
+                                "off      disable"
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Audio devices  (wfas devices)",
+                intro = "Lists every audio device Java Sound reports on this system, with the exact " +
+                        "name to hand to --output or --mic-input, what each one can do, and why any " +
+                        "of them was skipped. Alias: list-devices. Add --json for machine-readable " +
+                        "output.",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "devices",
+                        brief = "List the audio devices this system reports.",
+                        tokens = listOf("devices", "list-devices")
+                    )
+                ),
+                outro = "A device is normally kept only if it answers a format probe. That probe " +
+                        "opens the card, so it fails whenever another audio server (PulseAudio, " +
+                        "PipeWire, JACK) holds it, which is common on Linux and on Raspberry Pi. " +
+                        "When no device passes, wfas keeps the full list instead of leaving you " +
+                        "with nothing, and 'devices' says so explicitly."
+            )
+        ),
+        examples = listOf(
+            "wfas --client"                        to "join the first server found",
+            "wfas --connect 192.168.1.5"           to "connect to a specific server",
+            "wfas --client --output Loopback"      to "play into an ALSA loopback device",
+            "wfas --client --volume 40"            to "start quiet",
+            "wfas --client --latency 60"           to "trade robustness for a shorter delay",
+            "wfas --client --mic --mic-routing mix" to "talk back into the server's mix",
+            "wfas devices"                         to "list audio devices and their exact names",
+            "wfas devices --json"                  to "same, for scripts"
+        ),
+        seeAlso = listOf("receive", "runtime", "network", "config")
+    )
+
+    private val PROTOCOLS = HelpTopic(
+        key = "protocols",
+        title = "Streaming protocols",
+        tagline = "RTP, HTTP, DLNA, Snapcast",
+        aliases = listOf("rtp", "http", "dlna", "snapcast", "multiroom"),
+        intro = "Besides its own protocol the server can speak four standard ones at the same time, " +
+                "so receivers that have never heard of WFAS can still play the audio. Each of these " +
+                "implies --multicast. None of them is authenticated or encrypted: --auth-mode, " +
+                "--auth-key and --encrypt cover the native WFAS stream only.\n" +
+                "\n" +
+                "This is the sending side. wfas also receives two of these protocols - " +
+                "'wfas rtp listen' and 'wfas snapcast listen' - and those live under 'receive'.",
+        blocks = listOf(
+            HelpBlock(
+                heading = "RTP",
+                intro = "Plain RTP for VLC, ffplay and hardware receivers. Pair it with --sdp so the " +
+                        "receiver knows what it is getting.",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--rtp",
+                        brief = "Enable the RTP protocol. Implies --multicast.",
+                        tokens = listOf("--rtp")
+                    ),
+                    HelpEntry(
+                        syntax = "--rtp-port <n>",
+                        brief = "RTP port.",
+                        default = "9094",
+                        tokens = listOf("--rtp-port")
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "HTTP",
+                intro = "A plain HTTP stream any browser or media player can open by URL.",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--http",
+                        brief = "Enable the HTTP stream. Implies --multicast.",
+                        tokens = listOf("--http")
+                    ),
+                    HelpEntry(
+                        syntax = "--http-port <n>",
+                        brief = "HTTP port.",
+                        default = "8080",
+                        tokens = listOf("--http-port")
+                    ),
+                    HelpEntry(
+                        syntax = "--http-safari",
+                        brief = "Serve Safari-compatible AAC. Implies --http.",
+                        tokens = listOf("--http-safari")
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "DLNA",
+                intro = "Pushes the audio to the DLNA renderers saved in the settings, so the " +
+                        "renderer starts playing without anyone touching it.",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--dlna",
+                        brief = "Push audio to the saved DLNA renderers. Implies --multicast.",
+                        tokens = listOf("--dlna")
+                    ),
+                    HelpEntry(
+                        syntax = "--dlna-port <n>",
+                        brief = "DLNA media endpoint port.",
+                        default = "8081",
+                        tokens = listOf("--dlna-port")
+                    ),
+                    HelpEntry(
+                        syntax = "--dlna-format <f>",
+                        brief = "auto | lpcm | wav | mp3 | adts",
+                        default = "auto",
+                        tokens = listOf("--dlna-format")
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Snapcast",
+                intro = "Acts as a Snapcast server for synchronised multiroom audio. Any snapclient " +
+                        "on the network (Raspberry Pi, ESP32, Home Assistant, the Snapcast mobile " +
+                        "apps) can join and stay in sync.",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--snapcast",
+                        brief = "Act as a Snapcast server. Implies --multicast.",
+                        tokens = listOf("--snapcast")
+                    ),
+                    HelpEntry(
+                        syntax = "--snapcast-port <n>",
+                        brief = "Snapcast audio stream port.",
+                        default = "1704",
+                        tokens = listOf("--snapcast-port")
+                    ),
+                    HelpEntry(
+                        syntax = "--snapcast-control-port <n>",
+                        brief = "Snapcast JSON-RPC control port.",
+                        default = "1705",
+                        tokens = listOf("--snapcast-control-port")
+                    ),
+                    HelpEntry(
+                        syntax = "--snapcast-codec <c>",
+                        brief = "pcm | flac | opus",
+                        default = "pcm",
+                        tokens = listOf("--snapcast-codec"),
+                        detail = "flac roughly halves the bandwidth; opus needs 48000:16:2."
+                    ),
+                    HelpEntry(
+                        syntax = "--snapcast-chunk <n>",
+                        brief = "Chunk size in ms: 10 | 20 | 40 | 60",
+                        default = "20",
+                        tokens = listOf("--snapcast-chunk")
+                    ),
+                    HelpEntry(
+                        syntax = "--snapcast-buffer <n>",
+                        brief = "Client playback buffer in ms.",
+                        default = "1000",
+                        tokens = listOf("--snapcast-buffer")
+                    ),
+                    HelpEntry(
+                        syntax = "--snapcast-name <s>",
+                        brief = "Stream identifier advertised to clients.",
+                        default = "default",
+                        tokens = listOf("--snapcast-name")
+                    )
+                )
+            )
+        ),
+        examples = listOf(
+            "wfas --server --rtp --sdp"                to "RTP plus the SDP on stdout",
+            "wfas --server --http"                     to "listen from a browser on port 8080",
+            "wfas --server --http-safari"              to "AAC that Safari will play",
+            "wfas --server --dlna"                     to "push to the saved DLNA renderers",
+            "wfas --server --snapcast"                 to "synchronised multiroom audio",
+            "wfas --server --snapcast --snapcast-codec flac" to "half the bandwidth, same sync"
+        ),
+        seeAlso = listOf("receive", "server", "security", "runtime")
+    )
+
+    private val NETWORK = HelpTopic(
+        key = "network",
+        title = "USB & network",
+        tagline = "cable link, interfaces, IPv4/IPv6",
+        aliases = listOf("usb", "link", "ip", "ipv6", "transport"),
+        intro = "How the audio physically gets across: over Wi-Fi, over the USB cable, or both, and " +
+                "which address family to use.",
+        blocks = listOf(
+            HelpBlock(
+                heading = "USB link",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--usb",
+                        brief = "Stream over the USB cable instead of Wi-Fi.",
+                        tokens = listOf("--usb"),
+                        detail = "Enable USB tethering on the Android phone: the phone becomes the " +
+                                "gateway and the app finds the link on its own. Lower and far " +
+                                "steadier jitter than Wi-Fi, which is what lets the buffer shrink. " +
+                                "Not available on macOS: there is no built-in RNDIS driver, so " +
+                                "Android USB tethering does not come up. Overrides the saved " +
+                                "net.usbMode for this run."
+                    ),
+                    HelpEntry(
+                        syntax = "--no-usb",
+                        brief = "Force the USB link off even if it is enabled in the config.",
+                        tokens = listOf("--no-usb")
+                    ),
+                    HelpEntry(
+                        syntax = "--usb-latency <ms>",
+                        brief = "Jitter buffer used only while the USB link is up. Implies --usb.",
+                        default = "20, range 5-120",
+                        tokens = listOf("--usb-latency"),
+                        detail = "The Wi-Fi buffer set by --latency is left untouched."
+                    ),
+                    HelpEntry(
+                        syntax = "--usb-iface <name>",
+                        brief = "Force a specific tethering interface. Implies --usb.",
+                        tokens = listOf("--usb-iface"),
+                        detail = "Accepts the interface name or its display name as listed by " +
+                                "--debug, or 'Auto' to restore automatic detection."
+                    ),
+                    HelpEntry(
+                        syntax = "--wfas-mode <m>",
+                        brief = "always | not-on-usb | off",
+                        default = "not-on-usb",
+                        tokens = listOf("--wfas-mode"),
+                        detail = "When this device serves the native WFAS protocol:\n" +
+                                "  always      always, over Wi-Fi and over the cable\n" +
+                                "  not-on-usb  over Wi-Fi, but suppressed as soon as the USB link\n" +
+                                "              comes up\n" +
+                                "  off         never over Wi-Fi; only the cable and the other\n" +
+                                "              protocols remain\n" +
+                                "With 'off' and no --rtp/--http and no USB link there is nothing " +
+                                "left to serve, and the server refuses to start."
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Interface and address family",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--interface <name>",
+                        brief = "Network interface to bind and announce on.",
+                        default = "Auto",
+                        tokens = listOf("--interface")
+                    ),
+                    HelpEntry(
+                        syntax = "--ip4, --ipv4",
+                        brief = "IPv4 only: bind 0.0.0.0, announce and listen on 239.255.0.1 alone.",
+                        tokens = listOf("--ip4", "--ipv4")
+                    ),
+                    HelpEntry(
+                        syntax = "--ip6, --ipv6",
+                        brief = "IPv6 only: the [ff02::5746] group alone.",
+                        tokens = listOf("--ip6", "--ipv6")
+                    )
+                ),
+                outro = "Without either flag the app is dual-stack: it binds the wildcard, joins " +
+                        "both groups, and picks per peer the most usable address, where a routable " +
+                        "v4 or v6 beats a link-local. Force a family only to work around a broken " +
+                        "network; on a v6-only LAN auto already does the right thing."
+            )
+        ),
+        examples = listOf(
+            "wfas --server --usb"                   to "serve over the USB cable",
+            "wfas --server --usb --usb-latency 10"  to "USB with an aggressive buffer",
+            "wfas --server --usb --wfas-mode always" to "keep Wi-Fi serving while the cable is up",
+            "wfas --client --ip6"                   to "receive on an IPv6-only network",
+            "wfas --server --interface eth0"        to "pin the server to one interface"
+        ),
+        seeAlso = listOf("server", "client", "config")
+    )
+
+    private val SECURITY = HelpTopic(
+        key = "security",
+        title = "Security & pairing",
+        tagline = "encryption, keys, QR invites",
+        aliases = listOf("auth", "encrypt", "qr", "pair", "crypto"),
+        intro = "Everything in this section applies to the native WFAS protocol only. RTP, HTTP, " +
+                "DLNA and Snapcast are standard protocols: their clients are never authenticated " +
+                "and their audio always goes out in the clear, so enabling them alongside " +
+                "--encrypt exposes the very audio you are encrypting.",
+        blocks = listOf(
+            HelpBlock(
+                heading = "Authorization and encryption",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--auth-mode <m>",
+                        brief = "off | ask | key",
+                        default = "off, unicast only",
+                        tokens = listOf("--auth-mode"),
+                        detail = "off  accept anyone\n" +
+                                "ask  prompt on the terminal for each client that connects\n" +
+                                "key  require the pre-shared key\n\n" +
+                                "The security of a command line session comes from the command " +
+                                "line, and from nowhere else: a key set in the app protects the " +
+                                "app, and 'wfas --server' starts in the clear whatever the app " +
+                                "window says. That way one command means one thing on every " +
+                                "machine.\n\n" +
+                                "The other direction is explicit, so it is allowed: asking for " +
+                                "key mode without saying which key looks for one where you may " +
+                                "have put it on purpose - " + SettingsRepository.ENV_AUTH_KEY + " " +
+                                "first, then the system credential store, then this terminal. " +
+                                "None found, nothing starts."
+                    ),
+                    HelpEntry(
+                        syntax = "--ask-timeout <sec>",
+                        brief = "Only with --auth-mode ask: seconds before an unanswered client is refused.",
+                        default = "60, 0 waits forever",
+                        tokens = listOf("--ask-timeout"),
+                        detail = "The prompt appears on the terminal, or inside the visualizer panel " +
+                                "when --viz owns the screen. No terminal at all, or --json, means " +
+                                "nobody can answer: the client is refused and the reason is logged, " +
+                                "because a silent yes is not a decision anyone made."
+                    ),
+                    HelpEntry(
+                        syntax = "--auth-key <key|->",
+                        brief = "Pre-shared key. Implies --auth-mode key.",
+                        tokens = listOf("--auth-key"),
+                        detail = "The key is never sent on the wire: both sides prove they hold it " +
+                                "through a mutual HMAC challenge-response. A key written inline is " +
+                                "readable in the process list for as long as wfas runs, and stays in " +
+                                "your shell history: pass - to read it from standard input instead, " +
+                                "or use --auth-key-file."
+                    ),
+                    HelpEntry(
+                        syntax = "--auth-key-file <path>",
+                        brief = "Read the pre-shared key from a file. Implies --auth-mode key.",
+                        tokens = listOf("--auth-key-file"),
+                        detail = "The first non-empty line of the file is the key. Keeps it off the " +
+                                "command line and out of your shell history; set the file readable " +
+                                "only by you. WFAS_AUTH_KEY does the same through the environment."
+                    ),
+                    HelpEntry(
+                        syntax = "--encrypt",
+                        brief = "Encrypt the audio with ChaCha20-Poly1305.",
+                        tokens = listOf("--encrypt"),
+                        detail = "Requires a key, so pair it with --auth-key, or use --qr to have " +
+                                "one generated. See 'wfas --protocol' for the wire details."
+                    ),
+                    HelpEntry(
+                        syntax = "--qr",
+                        brief = "Generate a key, start encrypted, and print the pairing QR.",
+                        tokens = listOf("--qr"),
+                        detail = "Server mode. Implies --auth-mode key and --encrypt, so it needs no " +
+                                "--auth-key: the code carries the key it just made. While the " +
+                                "server runs, p prints a new invite and r rotates the key.\n\n" +
+                                "That key lives in this process and nowhere else: it is never " +
+                                "written to the configuration or to the credential store, and it " +
+                                "dies with the server. An invite is worth something only while " +
+                                "the server that issued it is up, and the next one starts from a " +
+                                "key nobody has seen before - so a device paired once is not " +
+                                "paired for good."
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "QR pairing  (wfas pair <command>)",
+                intro = "Hands a receiver everything it needs in one shot: address, port and a " +
+                        "freshly generated 256-bit key. The key is never typed and never travels " +
+                        "on the wire; the invite carries it and the handshake proves it. Invites " +
+                        "last " + WfasPairingUri.PAIRING_TTL_SECONDS + " seconds.",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "pair invite",
+                        brief = "Generate an invite and draw it as a QR code on the terminal.",
+                        tokens = listOf("pair", "qr", "invite"),
+                        detail = "With a server already running, the invite is generated by that " +
+                                "instance so it matches the live session; otherwise it is " +
+                                "generated offline and saved to the config, ready for the next " +
+                                "'wfas --server'. Add --watch for a live countdown that renews " +
+                                "the code on expiry: press n for a new invite, r for a new key, " +
+                                "k to reveal the key, q to quit."
+                    ),
+                    HelpEntry(
+                        syntax = "pair regenerate",
+                        brief = "Same, but always with a brand new key. Aliases: rekey, new-key.",
+                        tokens = listOf("regenerate", "rekey", "new-key"),
+                        detail = "In multicast this evicts every listener still using the old key, " +
+                                "which is exactly what you want after handing the code to the " +
+                                "wrong person."
+                    ),
+                    HelpEntry(
+                        syntax = "pair connect <link>",
+                        brief = "Join using an invite link. Alias: join.",
+                        tokens = listOf("connect", "join"),
+                        detail = "Accepts the wifiaudio://pair?... form or the https one. Starts " +
+                                "the client with the key already applied."
+                    ),
+                    HelpEntry(
+                        syntax = "pair inspect <link>",
+                        brief = "Decode a link and show what it contains, without connecting.",
+                        tokens = listOf("inspect", "check", "parse"),
+                        detail = "Exits non-zero if the invite has expired. Aliases: check, parse. " +
+                                "Also available as 'wfas inspect <link>'."
+                    ),
+                    HelpEntry(
+                        syntax = "pair encode <text>",
+                        brief = "Render any text as a QR code on the terminal. Alias: render.",
+                        tokens = listOf("encode", "render"),
+                        detail = "Also available as 'wfas encode <text>'."
+                    ),
+                    HelpEntry(
+                        syntax = "pair status",
+                        brief = "Show pairing state, key origin and handler registration.",
+                        tokens = listOf("status", "show", "info")
+                    ),
+                    HelpEntry(
+                        syntax = "pair off",
+                        brief = "Turn QR pairing off and restore the manually typed key. Alias: disable.",
+                        tokens = listOf("off", "disable")
+                    ),
+                    HelpEntry(
+                        syntax = "pair register",
+                        brief = "Force-register the wifiaudio:// handler with this OS.",
+                        tokens = listOf("register"),
+                        detail = "Per-user, no administrator rights. Every run already does this in " +
+                                "the background, rewriting the entry when it points at a different " +
+                                "executable, so moving or reinstalling the app repairs itself. Use " +
+                                "this only to see the repair fail loudly."
+                    ),
+                    HelpEntry(
+                        syntax = "pair unregister",
+                        brief = "Remove the wifiaudio:// handler.",
+                        tokens = listOf("unregister")
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "QR rendering",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--no-qr",
+                        brief = "Print only the link, no ASCII art.",
+                        tokens = listOf("--no-qr")
+                    ),
+                    HelpEntry(
+                        syntax = "--plain",
+                        brief = "Two characters per module instead of half-blocks.",
+                        tokens = listOf("--plain"),
+                        detail = "Use it if the terminal font has no U+2580/U+2584. Needs twice the width."
+                    ),
+                    HelpEntry(
+                        syntax = "--invert",
+                        brief = "Invert the code for terminals with a light background.",
+                        tokens = listOf("--invert")
+                    ),
+                    HelpEntry(
+                        syntax = "--show-key",
+                        brief = "Print the pairing key instead of masking it.",
+                        tokens = listOf("--show-key")
+                    )
+                )
+            )
+        ),
+        examples = listOf(
+            "wfas --server --qr"                    to "start a server and show its pairing QR",
+            "wfas pair invite --watch"              to "live QR that renews itself on expiry",
+            "wfas pair invite --json"               to "the invite as JSON, for scripts",
+            "wfas pair connect 'wifiaudio://pair?...'" to "join from an invite link",
+            "wfas pair inspect 'wifiaudio://pair?...'" to "decode a link without connecting",
+            "wfas pair regenerate"                  to "new key, evicts the old listeners",
+            "wfas --server --auth-key hunter2 --encrypt" to "encrypted with a key you chose"
+        ),
+        seeAlso = listOf("protocols", "reference")
+    )
+
+    private val CONFIG = HelpTopic(
+        key = "config",
+        title = "Configuration",
+        tagline = "settings, firewall, file locations",
+        aliases = listOf("settings", "firewall", "files"),
+        intro = "Persistent settings live in a single config.json shared by the CLI and the GUI. " +
+                "Changes apply the next time a server or client starts, or the next time the GUI " +
+                "opens.",
+        blocks = listOf(
+            HelpBlock(
+                heading = "Settings  (wfas config <command>)",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "config list",
+                        brief = "Show every setting and its current value. Aliases: ls, show.",
+                        tokens = listOf("config", "list", "ls", "show")
+                    ),
+                    HelpEntry(
+                        syntax = "config get <key>",
+                        brief = "Print one setting, for example audio.sampleRate.",
+                        tokens = listOf("get")
+                    ),
+                    HelpEntry(
+                        syntax = "config set <key> <value>",
+                        brief = "Change one setting and save it.",
+                        tokens = listOf("set")
+                    ),
+                    HelpEntry(
+                        syntax = "config path",
+                        brief = "Print the config.json path for this system. Alias: where.",
+                        tokens = listOf("path", "where")
+                    ),
+                    HelpEntry(
+                        syntax = "config edit",
+                        brief = "Open config.json in your default editor. Alias: open.",
+                        tokens = listOf("edit", "open")
+                    ),
+                    HelpEntry(
+                        syntax = "config reset",
+                        brief = "Restore all settings to their defaults.",
+                        tokens = listOf("reset")
+                    ),
+                    HelpEntry(
+                        syntax = "config export [file]",
+                        brief = "Write the config to a file, or to stdout if omitted. Alias: save.",
+                        tokens = listOf("export", "save")
+                    ),
+                    HelpEntry(
+                        syntax = "config import <file>",
+                        brief = "Load a config.json and make it active. Alias: load.",
+                        tokens = listOf("import", "load")
+                    )
+                ),
+                outro = "Add --json to any config command for machine-readable output."
+            ),
+            HelpBlock(
+                heading = "Overrides",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--config <path>",
+                        brief = "Use an alternate settings file for this run.",
+                        tokens = listOf("--config")
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Firewall  (wfas firewall <command>)   [Windows only]",
+                intro = "Opens the inbound UDP ports so clients can reach this machine, exactly like " +
+                        "the button in the GUI settings. Prompts once for administrator approval. " +
+                        "Alias: fw.",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "firewall allow [ports]",
+                        brief = "Allow inbound UDP.",
+                        tokens = listOf("firewall", "fw", "allow"),
+                        detail = "With no ports, opens the configured streaming, discovery (9091) " +
+                                "and mic ports. Or pass a list, as in " +
+                                "'wfas firewall allow 9090,9091'."
+                    ),
+                    HelpEntry(
+                        syntax = "firewall status",
+                        brief = "Show whether the WFAS firewall rule is active.",
+                        tokens = listOf("status")
+                    )
+                ),
+                outro = "Add --json for machine-readable output."
+            )
+        ),
+        examples = listOf(
+            "wfas config list"                      to "show every setting and its value",
+            "wfas config set audio.sampleRate 44100" to "change a setting for both GUI and CLI",
+            "wfas config get audio.latencyMs"       to "read one setting",
+            "wfas config path"                      to "print the config.json path",
+            "wfas config export backup.json"        to "save the current configuration",
+            "wfas firewall allow"                   to "open the default ports in the firewall",
+            "wfas firewall status"                  to "check if the firewall rule is active"
+        ),
+        seeAlso = listOf("network", "reference")
+    )
+
+    private val RUNTIME = HelpTopic(
+        key = "runtime",
+        title = "Runtime & monitoring",
+        tagline = "control, status, visualizer, debug",
+        aliases = listOf("control", "viz", "debug", "monitor", "status"),
+        intro = "Talk to an instance that is already running, watch what it is doing, or look at " +
+                "the audio itself.",
+        blocks = listOf(
+            HelpBlock(
+                heading = "Runtime control  (wfas control <command>)",
+                intro = "Sent over a local IPC socket to the running instance, GUI or CLI alike.",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "control volume <0-100>",
+                        brief = "Set the output volume.",
+                        tokens = listOf("control", "volume")
+                    ),
+                    HelpEntry(
+                        syntax = "control mute | unmute",
+                        brief = "Toggle audio output.",
+                        tokens = listOf("mute", "unmute")
+                    ),
+                    HelpEntry(
+                        syntax = "control stop",
+                        brief = "Stop the running instance.",
+                        tokens = listOf("stop")
+                    ),
+                    HelpEntry(
+                        syntax = "control status",
+                        brief = "Show the current streaming status.",
+                        tokens = listOf("status"),
+                        detail = "Includes the RTP, HTTP, DLNA and Snapcast side-protocols and " +
+                                "their connected clients."
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Visualizer",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--viz [theme]",
+                        brief = "Animated ASCII spectrum histogram of the audio stream.",
+                        tokens = listOf("--viz"),
+                        detail = "Optional theme: a hex color such as #1e88e5 recolors the whole " +
+                                "view via the Material You palette, or 'rainbow' for an animated " +
+                                "dynamic rainbow."
+                    ),
+                    HelpEntry(
+                        syntax = "--groove [amount]",
+                        brief = "Only with --viz: adaptive spectrum that follows the melody.",
+                        tokens = listOf("--groove"),
+                        detail = "Instead of drawing raw levels, where bass pins the low bars at " +
+                                "full scale and everything else flattens into one blob, each band " +
+                                "is compared with its frequency neighbours, so a note that pokes " +
+                                "out of its region is lifted, and a slow per-band envelope is " +
+                                "subtracted, so the constant part of the mix stops dominating. " +
+                                "Optional amount: soft | normal | hard, or 0-160. Press g in the " +
+                                "visualizer to toggle it live."
+                    ),
+                    HelpEntry(
+                        syntax = "--monitor",
+                        brief = "Only with --viz: no server, just visualize the system audio. Alias: --listen.",
+                        tokens = listOf("--monitor", "--listen"),
+                        detail = "Reads the loopback without lowering the system volume."
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Diagnostics and output",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--debug",
+                        brief = "Live debug HUD, then internal logs.",
+                        tokens = listOf("--debug"),
+                        detail = "Audio packet table plus, with --mic, the microphone send/receive " +
+                                "table. Also lists the network interfaces by name and display name, " +
+                                "which is what --usb-iface expects."
+                    ),
+                    HelpEntry(
+                        syntax = "--json",
+                        brief = "Emit all output as JSON.",
+                        tokens = listOf("--json")
+                    ),
+                    HelpEntry(
+                        syntax = "--reveal",
+                        brief = "Print secret config values instead of masking them.",
+                        tokens = listOf("--reveal"),
+                        detail = "Secrets such as security.authKey are shown as ******** by " +
+                                "'config list', 'config get' and 'config export', so they do not " +
+                                "end up in terminal scrollback, shell history or a shared export " +
+                                "by accident. Pass --reveal when you actually need the value, and " +
+                                "treat whatever it lands in as a secret. It prints only to an " +
+                                "interactive terminal: redirected output and --json are refused, " +
+                                "and 'config export --reveal' asks for confirmation before writing " +
+                                "secrets in plain text. For unattended use pass the key through " +
+                                "WFAS_AUTH_KEY instead. Note that this guards against accidents, " +
+                                "not against a hostile program: anything running as your user can " +
+                                "read the same secret straight from the credential store."
+                    ),
+                    HelpEntry(
+                        syntax = "--quiet",
+                        brief = "Suppress logs; only errors go to stderr.",
+                        tokens = listOf("--quiet")
+                    )
+                )
+            )
+        ),
+        examples = listOf(
+            "wfas control volume 75"        to "set volume on the running instance",
+            "wfas control status"           to "what is streaming right now",
+            "wfas control status --json"    to "same, for scripts",
+            "wfas control stop"             to "stop the running instance",
+            "wfas --viz rainbow"            to "spectrum with animated rainbow colors",
+            "wfas --viz \"#1e88e5\""          to "spectrum themed from a hex color",
+            "wfas --viz --monitor"          to "spectrum of the system audio, no server",
+            "wfas --viz --monitor --groove" to "same, adaptive: follows the melody",
+            "wfas --viz --groove hard"      to "maximum contrast between notes",
+            "wfas --server --debug"         to "serve with the debug HUD"
+        ),
+        seeAlso = listOf("client", "config")
+    )
+
+
+    private val RECEIVE = HelpTopic(
+        key = "receive",
+        title = "Receiving RTP & Snapcast",
+        tagline = "listen to streams this machine did not start",
+        aliases = listOf("rtp-client", "snapcast-client", "snapclient", "listen", "multiroom"),
+        intro = "The other direction of 'Streaming protocols': there wfas speaks RTP and Snapcast " +
+                "to send, here it speaks them to receive. 'wfas rtp' plays a stream produced by " +
+                "ffmpeg, VLC, a hardware sender or another wfas server; 'wfas snapcast' joins a " +
+                "Snapcast server as one of its clients, in sync with every other room, and can " +
+                "read and change the whole installation from the control channel. Neither has " +
+                "anything to do with the native WFAS client, which is 'wfas --client'.",
+        blocks = listOf(
+            HelpBlock(
+                heading = "RTP  (wfas rtp <command>)",
+                intro = "The source can be given in four ways, and they can be mixed: an .sdp " +
+                        "file, the descriptor on standard input, an address, or the name of a " +
+                        "source saved earlier. Whatever is given, the individual options below " +
+                        "still have the last word, so a saved source can be reused on a " +
+                        "different port without editing anything.",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "rtp listen [source]",
+                        brief = "Listen to an RTP stream and play it. Aliases: play, receive.",
+                        tokens = listOf("rtp"),
+                        detail = "source is recognised on its own: a path ending in .sdp or any " +
+                                "readable file is an SDP descriptor, - reads one from standard " +
+                                "input, 239.255.0.1:9094 or :9094 is an address, and anything " +
+                                "else is looked up among the saved sources by name, by #index or " +
+                                "by address. With nothing at all, the single saved source is used."
+                    ),
+                    HelpEntry(
+                        syntax = "rtp inspect <source>",
+                        brief = "Say what the descriptor means, and what it leaves out. Aliases: check, parse.",
+                        detail = "Reads the SDP without opening a socket, then prints the address, " +
+                                "the format, whether the delivery is multicast, and whether the " +
+                                "audio can be played natively or has to go through FFmpeg. " +
+                                "Anything the descriptor did not say and wfas had to assume is " +
+                                "listed as a warning, because those assumptions are exactly what " +
+                                "makes a stream come out at the wrong speed or pitch."
+                    ),
+                    HelpEntry(
+                        syntax = "rtp sdp [source]",
+                        brief = "Print the SDP descriptor of a source, for another player.",
+                        detail = "Writes the original descriptor when the source came from one, " +
+                                "and otherwise builds a minimal valid one from the fields. " +
+                                "--sdp-out also saves it to a file."
+                    ),
+                    HelpEntry(
+                        syntax = "rtp sources",
+                        brief = "List the saved sources with their index. Aliases: list, ls, saved.",
+                        detail = "The index is the #n accepted anywhere a source is named."
+                    ),
+                    HelpEntry(
+                        syntax = "rtp save [name]",
+                        brief = "Save the source described by the current options.",
+                        detail = "A source with the same address and port replaces the old entry " +
+                                "instead of adding a duplicate. Saved sources are shared with the " +
+                                "desktop app: they are app.rtpSources in the configuration."
+                    ),
+                    HelpEntry(
+                        syntax = "rtp forget <name|#n|all>",
+                        brief = "Remove a saved source. Aliases: remove, rm, delete."
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "RTP options",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--sdp-file <path>",
+                        brief = "Read the SDP descriptor from a file, or from standard input with -.",
+                        tokens = listOf("--sdp-file"),
+                        detail = "Same thing as passing the path as the source; the flag exists so " +
+                                "scripts do not have to rely on the guess. Do not confuse it with " +
+                                "--sdp and --sdp-out, which belong to the sending side."
+                    ),
+                    HelpEntry(
+                        syntax = "--rtp-address <addr>",
+                        brief = "Multicast group to join, or the local address to listen on.",
+                        default = "any interface",
+                        tokens = listOf("--rtp-address"),
+                        detail = "An address in 224.0.0.0/4 (or ff00::/8) is a multicast group and " +
+                                "is joined on the interface chosen by --interface. Anything else, " +
+                                "empty included, means unicast: the port alone decides."
+                    ),
+                    HelpEntry(
+                        syntax = "--rtp-port <n>",
+                        brief = "Port to listen on.",
+                        default = "9094, or whatever the SDP says",
+                        tokens = listOf("--rtp-port")
+                    ),
+                    HelpEntry(
+                        syntax = "--rtp-codec <name>",
+                        brief = "Payload encoding, as in the a=rtpmap line.",
+                        default = "L16",
+                        tokens = listOf("--rtp-codec"),
+                        detail = "L16 is raw 16-bit PCM and is played straight through, which is " +
+                                "the lowest latency path. Every other encoding is handed to " +
+                                "FFmpeg, which decodes it and adds its own buffering."
+                    ),
+                    HelpEntry(
+                        syntax = "--rtp-rate <hz>",
+                        brief = "Sample rate of the stream.",
+                        default = "48000, range 8000-192000",
+                        tokens = listOf("--rtp-rate"),
+                        detail = "It has to match the sender. A wrong rate does not fail: it plays " +
+                                "at the wrong speed and pitch, which is why 'rtp inspect' says " +
+                                "out loud when the descriptor did not state one."
+                    ),
+                    HelpEntry(
+                        syntax = "--rtp-channels <n>",
+                        brief = "1 or 2.",
+                        default = "2",
+                        tokens = listOf("--rtp-channels")
+                    ),
+                    HelpEntry(
+                        syntax = "--rtp-payload <n>",
+                        brief = "RTP payload type, 0-127.",
+                        default = "96",
+                        tokens = listOf("--rtp-payload"),
+                        detail = "Packets carrying a different payload type are ignored, so this " +
+                                "is what keeps two streams sharing one port apart."
+                    ),
+                    HelpEntry(
+                        syntax = "--rtp-name <text>",
+                        brief = "Label for the source, used when saving and in the listings.",
+                        tokens = listOf("--rtp-name")
+                    )
+                ),
+                outro = "The output device, the buffer and the initial volume come from the shared " +
+                        "options: --output, --latency, --volume and --mute behave exactly as they " +
+                        "do for the native client."
+            ),
+            HelpBlock(
+                heading = "Snapcast  (wfas snapcast <command>)",
+                intro = "Snapcast keeps every room on the same sample at the same instant, so this " +
+                        "is a full client and not just a player: the control channel shows the " +
+                        "groups, the clients and the streams of the whole installation, and lets " +
+                        "you change them. Alias: snap. The server can be named as an address, as " +
+                        "the name of a saved one, or left out entirely, in which case it is looked " +
+                        "for over mDNS and used if it is the only one.",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "snapcast listen [server]",
+                        brief = "Join the server and play in sync. Aliases: connect, play, join.",
+                        tokens = listOf("snapcast", "snap")
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast discover",
+                        brief = "Find the Snapcast servers announced on this network. Aliases: browse, scan.",
+                        detail = "Add --watch to keep the list updating, --json for one line per server."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast mixer",
+                        brief = "Join the server and control the whole installation from one " +
+                                "screen. Aliases: ui, tui, top.",
+                        detail = "This is 'snapcast listen' with a screen instead of status " +
+                                "lines: it plays the audio too, exactly like the desktop " +
+                                "application, where listening and controlling are one window.\n" +
+                                "\n" +
+                                "Arrows or jk move, left and right change the volume by 5, m " +
+                                "mutes, g moves the client to another group, s detaches it into " +
+                                "one of its own, n renames, y sets the latency, t picks the " +
+                                "stream, r refreshes, q leaves. On a group row the volume keys " +
+                                "shift every client in it by the same amount, so the balance " +
+                                "between rooms is kept.\n" +
+                                "\n" +
+                                "Everything shown comes from the server, and every key sends a " +
+                                "command on the control channel: there is no local state that " +
+                                "could drift from what the other apps see. Without an " +
+                                "interactive terminal, or with --json, it falls back to the " +
+                                "status lines of 'snapcast listen', so a pipe gets output and " +
+                                "not a screenful of escape sequences."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast status",
+                        brief = "Groups, clients and streams of the whole installation.",
+                        detail = "Add --watch to follow it live: the view is redrawn when the " +
+                                "server actually reports a change, not on a timer."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast clients | groups | streams",
+                        brief = "The three views on their own, one row per entry."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast volume <client> <0-100>",
+                        brief = "Set a client's volume. Alias: vol.",
+                        detail = "A client is named by its name, by its id, by its address or by " +
+                                "the #n of the listing; a fragment of the name is enough as long " +
+                                "as it matches only one. The same goes for groups."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast mute | unmute <client>",
+                        brief = "Mute or unmute one client."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast latency <client> <ms>",
+                        brief = "Per-client delay, -2000 to 2000.",
+                        detail = "Positive values delay that room, to line it up with one that " +
+                                "is slower to play."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast rename <client> <name>",
+                        brief = "Rename a client on the server."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast move <client> <group>",
+                        brief = "Move a client into an existing group.",
+                        detail = "Snapcast has no move command: the only one available rewrites " +
+                                "the whole membership of the destination group, so wfas reads it, " +
+                                "adds the client and writes it back. The old group is the server's " +
+                                "problem."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast split <client>",
+                        brief = "Detach a client into a group of its own. Alias: detach.",
+                        detail = "Same mechanism in reverse, and it depends on the server: some do " +
+                                "not re-home a client removed from a group, and leave it invisible " +
+                                "while it keeps playing. wfas checks afterwards and puts it back " +
+                                "where it was if that happened, rather than leaving you with a " +
+                                "room nobody can control."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast group-mute <group> on|off",
+                        brief = "Mute or unmute a whole group."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast group-rename <group> <name>",
+                        brief = "Rename a group. Alias: group-name."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast group-stream <group> <stream>",
+                        brief = "Point a group at one of the server's streams.",
+                        detail = "'wfas snapcast streams' lists the ids that are accepted here."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast servers",
+                        brief = "List the saved servers with their index. Alias: saved."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast save [name]",
+                        brief = "Save the server described by the current options.",
+                        detail = "Shared with the desktop app as app.snapcastServers."
+                    ),
+                    HelpEntry(
+                        syntax = "snapcast forget <name|#n|all>",
+                        brief = "Remove a saved server. Aliases: remove, rm, delete."
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Snapcast options",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--snap-host <host>",
+                        brief = "Address of the Snapcast server to join.",
+                        tokens = listOf("--snap-host"),
+                        detail = "Not to be confused with --snapcast, which makes this machine a " +
+                                "Snapcast server instead of a client."
+                    ),
+                    HelpEntry(
+                        syntax = "--snap-port <n>",
+                        brief = "Audio port of the server.",
+                        default = "1704",
+                        tokens = listOf("--snap-port")
+                    ),
+                    HelpEntry(
+                        syntax = "--snap-control-port <n>",
+                        brief = "JSON-RPC control port of the server.",
+                        default = "1705, or the audio port plus one",
+                        tokens = listOf("--snap-control-port"),
+                        detail = "The control channel is optional: without it the audio still " +
+                                "plays, but the volume of this machine cannot be changed from " +
+                                "anywhere and the rest of the installation stays invisible."
+                    ),
+                    HelpEntry(
+                        syntax = "--snap-name <text>",
+                        brief = "Name announced to the server.",
+                        default = "this machine's hostname",
+                        tokens = listOf("--snap-name"),
+                        detail = "It is what shows up in the Snapcast apps and in " +
+                                "'wfas snapcast clients'. Unrelated to --snapcast-name, which " +
+                                "names the stream a wfas Snapcast server publishes."
+                    ),
+                    HelpEntry(
+                        syntax = "--no-audio",
+                        brief = "Mixer only: control the system without joining it.",
+                        tokens = listOf("--no-audio"),
+                        detail = "Turns 'snapcast mixer' into a remote control. Useful from a " +
+                                "laptop that should change the volume of the house without " +
+                                "becoming another room, and on a machine with no usable audio " +
+                                "output at all."
+                    ),
+                    HelpEntry(
+                        syntax = "--snap-id <id>",
+                        brief = "Client identifier.",
+                        default = "the MAC address of this machine",
+                        tokens = listOf("--snap-id"),
+                        detail = "The server remembers volume, latency and group per identifier, " +
+                                "so changing it starts from a clean slate; two clients sharing " +
+                                "one identifier fight over the same settings."
+                    )
+                ),
+                outro = "--volume, --mute and --latency go through the control channel, so the " +
+                        "server and every other app see them. Without a control channel --volume " +
+                        "and --mute fall back to a local trim, and --latency has nowhere to go."
+            ),
+            HelpBlock(
+                heading = "While listening",
+                intro = "Both sessions take single-letter commands on standard input, and both " +
+                        "answer 'wfas control' from another terminal.",
+                entries = listOf(
+                    HelpEntry(syntax = "q", brief = "Stop and exit. Also quit, stop."),
+                    HelpEntry(syntax = "v <0-100>", brief = "Set the volume."),
+                    HelpEntry(syntax = "m / u", brief = "Mute and unmute."),
+                    HelpEntry(syntax = "s", brief = "RTP: packets, loss and buffer. Snapcast: codec, buffer and sync error."),
+                    HelpEntry(syntax = "g", brief = "Snapcast only: the groups and clients of the installation."),
+                    HelpEntry(syntax = "l <ms>", brief = "Snapcast only: this client's latency.")
+                ),
+                outro = "--viz draws the spectrum analyser for either one, and 'wfas control " +
+                        "status' from another terminal reports what is being received, from " +
+                        "where, and how full the buffer is."
+            )
+        ),
+        examples = listOf(
+            "wfas rtp listen stream.sdp"            to "play the stream an SDP file describes",
+            "ffmpeg ... | wfas rtp listen -"        to "take the descriptor from a pipe",
+            "wfas rtp listen 239.255.0.1:9094"      to "join a multicast group directly",
+            "wfas rtp inspect stream.sdp"           to "read the descriptor without listening",
+            "wfas rtp save kitchen --rtp-address 239.255.0.1" to "remember it as 'kitchen'",
+            "wfas rtp listen kitchen --viz"         to "listen to it with the spectrum analyser",
+            "wfas snapcast discover"                to "find the Snapcast servers on this network",
+            "wfas snapcast listen"                  to "join the only server around",
+            "wfas snapcast mixer"                   to "play, and control every room from one screen",
+            "wfas snapcast mixer --no-audio"        to "control the house without playing here",
+            "wfas snapcast status --watch"          to "follow the whole installation live",
+            "wfas snapcast volume kitchen 40"       to "turn the kitchen down",
+            "wfas snapcast move kitchen Living"     to "put the kitchen in the living room group",
+            "wfas snapcast clients --json"          to "one JSON line per client, for scripts"
+        ),
+        seeAlso = listOf("protocols", "client", "runtime")
+    )
+
+    private const val TOPIC_KEYS_PLACEHOLDER = "start, server, client, protocols, receive, " +
+            "network, security, config, runtime, reference"
+
+    private val REFERENCE = HelpTopic(
+        key = "reference",
+        title = "Reference",
+        tagline = "protocol, updates, licenses, help itself",
+        aliases = listOf("about", "version", "protocol", "licenses", "update", "help"),
+        blocks = listOf(
+            HelpBlock(
+                heading = "Documentation",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--protocol",
+                        brief = "Explain the WFAS v2 wire protocol and exit.",
+                        tokens = listOf("--protocol")
+                    ),
+                    HelpEntry(
+                        syntax = "--licenses",
+                        brief = "Show third-party open-source licenses and exit. Aliases: --license, --credits.",
+                        tokens = listOf("--licenses", "--license", "--credits")
+                    ),
+                    HelpEntry(
+                        syntax = "--version, -v",
+                        brief = "Show the version and exit.",
+                        tokens = listOf("--version", "-v")
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Updates",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--check-update",
+                        brief = "Check GitHub for a newer release and exit. Alias: --check-updates.",
+                        tokens = listOf("--check-update", "--check-updates")
+                    ),
+                    HelpEntry(
+                        syntax = "--auto-check-update on|off",
+                        brief = "Enable or disable the automatic update check at startup.",
+                        tokens = listOf("--auto-check-update", "--auto-check-updates"),
+                        detail = "Equivalent to 'wfas config set app.autoCheckUpdate on|off'."
+                    )
+                )
+            ),
+            HelpBlock(
+                heading = "Help itself",
+                entries = listOf(
+                    HelpEntry(
+                        syntax = "--help, -h",
+                        brief = "Open the interactive help browser.",
+                        tokens = listOf("--help", "-h"),
+                        detail = "Falls back to the complete text whenever the output is not an " +
+                                "interactive terminal, so 'wfas --help > help.txt' and " +
+                                "'wfas --help | grep snapcast' both give you everything. Set " +
+                                "WFAS_NO_INTERACTIVE=1 to force that fallback."
+                    ),
+                    HelpEntry(
+                        syntax = "--help all",
+                        brief = "Print every section at once, never interactive."
+                    ),
+                    HelpEntry(
+                        syntax = "--help <topic>",
+                        brief = "Print one section. Topics: " + TOPIC_KEYS_PLACEHOLDER
+                    ),
+                    HelpEntry(
+                        syntax = "--help --json",
+                        brief = "Emit the whole option table as JSON, for completions and docs."
+                    )
+                )
+            )
+        ),
+        examples = listOf(
+            "wfas --protocol"           to "print the WFAS v2 protocol reference",
+            "wfas --help snapcast"      to "jump straight to the Snapcast options",
+            "wfas --help all | less"    to "read the whole thing in a pager",
+            "wfas --check-update"       to "see if a newer release exists"
+        ),
+        seeAlso = listOf("start")
+    )
+
+    val topics: List<HelpTopic> = listOf(
+        START, SERVER, CLIENT, PROTOCOLS, RECEIVE, NETWORK, SECURITY, CONFIG, RUNTIME, REFERENCE
+    )
+
+    fun byKey(raw: String): HelpTopic? {
+        val k = raw.lowercase().removePrefix("--").trim()
+        if (k.isEmpty()) return null
+        topics.firstOrNull { it.key == k }?.let { return it }
+        topics.firstOrNull { k in it.aliases }?.let { return it }
+        k.toIntOrNull()?.let { n -> if (n in 1..topics.size) return topics[n - 1] }
+        return topics.firstOrNull { it.key.startsWith(k) }
+    }
+
+    fun allTokens(): Set<String> =
+        topics.flatMap { t -> t.blocks.flatMap { b -> b.entries.flatMap { it.tokens } } }.toSet()
+}

@@ -1,0 +1,93 @@
+name: Build Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "android/**"
+      - "WFAS_PROTOCOL.md"
+      - ".github/workflows/android.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: android
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: |
+            android/**/*.gradle*
+            android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Restore stable Android signing key
+        uses: actions/cache@v4
+        with:
+          path: android/.ci/lab-debug.keystore
+          key: wfas-android-debug-keystore-v2
+
+      - name: Ensure stable Android signing key
+        run: |
+          set -euo pipefail
+          mkdir -p .ci
+          if [ ! -f .ci/lab-debug.keystore ]; then
+            keytool -genkeypair -keystore .ci/lab-debug.keystore -storepass android -alias androiddebugkey -keypass android -dname "CN=WFAS Android,O=WFAS,C=US" -keyalg RSA -keysize 2048 -validity 10000
+          fi
+          echo "WFAS_LAB_KEYSTORE=$GITHUB_WORKSPACE/android/.ci/lab-debug.keystore" >> "$GITHUB_ENV"
+
+      - name: Install Android 36 SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set CI version
+        run: |
+          set -euo pipefail
+          CODE=$((2201000 + GITHUB_RUN_NUMBER))
+          echo "WFAS_VERSION_CODE=$CODE" >> "$GITHUB_ENV"
+          echo "WFAS_VERSION_NAME=1.2.1-main.$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+
+      - name: Run unit tests
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:testDebugUnitTest --stacktrace
+
+      - name: Build Android APK
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Prepare versioned APK
+        run: |
+          set -euo pipefail
+          APK_NAME="WiFi-Audio-Streaming-Android-${GITHUB_RUN_NUMBER}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/$APK_NAME"
+          echo "WFAS_APK_PATH=$GITHUB_WORKSPACE/$APK_NAME" >> "$GITHUB_ENV"
+          echo "WFAS_ARTIFACT_NAME=WiFi-Audio-Streaming-Android-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.WFAS_ARTIFACT_NAME }}
+          path: ${{ env.WFAS_APK_PATH }}
+          if-no-files-found: error

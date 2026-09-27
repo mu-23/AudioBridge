@@ -1,0 +1,52 @@
+name: Build Desktop Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "desktop/**"
+      - "WFAS_PROTOCOL.md"
+      - ".github/workflows/desktop-windows.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: desktop
+
+jobs:
+  windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: true
+
+      - name: Build Windows portable package
+        run: .\gradlew.bat createReleaseDistributable packagePortableArchives
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: WiFi-Audio-Streaming-Desktop-Windows
+          path: |
+            desktop/build/packages/*.zip
+            desktop/build/compose/binaries/main-release/app/**
+          if-no-files-found: error

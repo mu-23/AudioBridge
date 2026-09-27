@@ -41,7 +41,10 @@ class ClientService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (StreamingActionReceiver.wasRecentlyTaskRemoved(this)
+        if (
+            StreamingActionReceiver.wasRecentlyTaskRemoved(this) ||
+            !RoleSelectionGate.isReceiverSelected() ||
+            !ClientSessionController.hasReconnectIntent(this)
         ) {
             stopSelf()
             return START_NOT_STICKY

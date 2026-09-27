@@ -96,6 +96,10 @@ class AutoConnectService : Service() {
 
     @SuppressLint("MissingPermission")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (StreamingActionReceiver.wasRecentlyTaskRemoved(this)) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         if (listenJob?.isActive == true) {
             return START_STICKY
         }
@@ -282,7 +286,7 @@ class AutoConnectService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        StreamingActionReceiver.stopEverything(this)
+        StreamingActionReceiver.handleTaskRemoved(this)
         stopSelf()
         super.onTaskRemoved(rootIntent)
     }

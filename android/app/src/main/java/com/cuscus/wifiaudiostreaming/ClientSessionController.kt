@@ -57,6 +57,9 @@ object ClientSessionController {
 
     fun wantsConnection(): Boolean = desiredConnected
 
+    fun hasReconnectIntent(context: Context): Boolean =
+        desiredConnected || restoreDesiredTarget(context.applicationContext) != null
+
     @SuppressLint("MissingPermission")
     fun connect(context: Context, serverInfo: ServerInfo, presharedKey: String? = null) {
         val app = context.applicationContext

@@ -234,6 +234,7 @@ class MainActivity : AppCompatActivity() {
         }
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        StreamingActionReceiver.clearTaskRemovedStop(this)
         actionBar?.hide()
 
         NetworkManager.prewarmAudio()

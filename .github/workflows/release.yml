@@ -1,0 +1,174 @@
+name: Release Android + Windows
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing tag to release, for example v1.2.1"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: |
+            android/**/*.gradle*
+            android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Restore stable Android signing key
+        uses: actions/cache@v4
+        with:
+          path: .ci/lab-debug.keystore
+          key: wfas-audio-bridge-lab-debug-keystore-v2
+
+      - name: Ensure stable Android signing key
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/.ci"
+          if [ ! -f "$GITHUB_WORKSPACE/.ci/lab-debug.keystore" ]; then
+            keytool -genkeypair \
+              -keystore "$GITHUB_WORKSPACE/.ci/lab-debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -dname "CN=WFAS Audio Bridge Lab,O=WFAS,C=US" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000
+          fi
+          echo "WFAS_LAB_KEYSTORE=$GITHUB_WORKSPACE/.ci/lab-debug.keystore" >> "$GITHUB_ENV"
+
+      - name: Install Android 36 SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set release version
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          NAME="${RELEASE_TAG#v}"
+          NAME="${NAME#V}"
+          CODE=$((2300000 + GITHUB_RUN_NUMBER))
+          echo "WFAS_VERSION_CODE=$CODE" >> "$GITHUB_ENV"
+          echo "WFAS_VERSION_NAME=$NAME" >> "$GITHUB_ENV"
+          echo "WFAS_RELEASE_VERSION=$NAME" >> "$GITHUB_ENV"
+
+      - name: Run Android unit tests
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:testDebugUnitTest --stacktrace
+
+      - name: Build signed Android APK
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Collect Android release asset
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/release-assets"
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            "$GITHUB_WORKSPACE/release-assets/WiFi-Audio-Streaming-Android-${WFAS_RELEASE_VERSION}.apk"
+
+      - name: Upload Android release asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: release-assets/*.apk
+          if-no-files-found: error
+
+  windows:
+    name: Build Windows
+    runs-on: windows-latest
+    env:
+      WFAS_VERSION_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref }}
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: true
+
+      - name: Build Windows portable package
+        working-directory: desktop
+        run: .\gradlew.bat createReleaseDistributable packagePortableArchives
+
+      - name: Collect Windows release assets
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\release-assets" | Out-Null
+          Copy-Item "$env:GITHUB_WORKSPACE\desktop\build\packages\*.zip" "$env:GITHUB_WORKSPACE\release-assets\" -Force
+
+      - name: Upload Windows release asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: release-assets/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish unified release
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --verify-tag \
+            --title "WiFi Audio Streaming $RELEASE_TAG" \
+            --generate-notes \
+            release-assets/*

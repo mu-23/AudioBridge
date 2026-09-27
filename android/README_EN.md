@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/mu-23/WiFiAudioStreaming-Android/main/fastlane/metadata/android/en-US/images/icon.png" alt="WiFi Audio Streaming" width="120" />
+  <img src="https://raw.githubusercontent.com/mu-23/WiFiAudioStreaming/main/android/fastlane/metadata/android/en-US/images/icon.png" alt="WiFi Audio Streaming" width="120" />
 
   # WiFi Audio Streaming for Android
 
@@ -9,9 +9,9 @@
 
   **English** | [简体中文](README.md)
 
-  [Download Latest Release](https://github.com/mu-23/WiFiAudioStreaming-Android/releases/latest) ·
-  [Releases](https://github.com/mu-23/WiFiAudioStreaming-Android/releases) ·
-  [Experimental Branch](https://github.com/mu-23/WiFiAudioStreaming-Android/tree/audio-bridge-lab)
+  [Download Latest Release](https://github.com/mu-23/WiFiAudioStreaming/releases/latest) ·
+  [Releases](https://github.com/mu-23/WiFiAudioStreaming/releases) ·
+  [Experimental Branch](https://github.com/mu-23/WiFiAudioStreaming/tree/audio-bridge-lab)
 </div>
 
 ---
@@ -165,7 +165,7 @@ Goals:
 
 Current experimental code is available on:
 
-[`audio-bridge-lab`](https://github.com/mu-23/WiFiAudioStreaming-Android/tree/audio-bridge-lab)
+[`audio-bridge-lab`](https://github.com/mu-23/WiFiAudioStreaming/tree/audio-bridge-lab)
 
 The first stage is validating `REMOTE_SUBMIX` capture under the Android Shell UID. Later stages will continue with Shizuku UserService and Android AudioPolicy experiments.
 
@@ -233,8 +233,8 @@ If discovery is blocked on the LAN, the sender IP can also be entered manually.
 Android Studio / JDK 17 is recommended.
 
 ```bash
-git clone https://github.com/mu-23/WiFiAudioStreaming-Android.git
-cd WiFiAudioStreaming-Android
+git clone https://github.com/mu-23/WiFiAudioStreaming.git
+cd WiFiAudioStreaming/android
 ./gradlew assembleDebug
 ```
 

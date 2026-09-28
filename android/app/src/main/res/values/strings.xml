@@ -573,6 +573,12 @@
     <string name="notif_channel_auto_connect_desc">Background search for your starred servers.</string>
     <string name="notif_channel_automation_name">Automation</string>
     <string name="notif_channel_automation_desc">Warnings about external commands that were refused.</string>
+    <string name="notif_channel_control_name">AudioBridge quick controls</string>
+    <string name="notif_channel_control_desc">Switch directly between Send, Receive and Off from the notification shade.</string>
+    <string name="notif_mode_control_title">AudioBridge mode</string>
+    <string name="notif_mode_off">Current: Off</string>
+    <string name="notif_mode_send">Current: Send</string>
+    <string name="notif_mode_receive">Current: Receive</string>
     <string name="notif_automation_blocked_title">External command blocked</string>
     <string name="notif_automation_blocked_token">A command arrived without a valid token and was not executed. Open Automation &amp; Scripting to copy the current token into your automation.</string>
     <string name="notif_automation_blocked_disabled">A command arrived while external commands are turned off. Enable them in Automation &amp; Scripting if you expected this.</string>

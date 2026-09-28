@@ -126,6 +126,9 @@
                 <action android:name="com.cuscus.wifiaudiostreaming.ACTION_CLIENT_VOLUME_DOWN" />
                 <action android:name="com.cuscus.wifiaudiostreaming.ACTION_SHOW_SERVER_VOLUME" />
                 <action android:name="com.cuscus.wifiaudiostreaming.ACTION_SHOW_CLIENT_VOLUME" />
+                <action android:name="com.cuscus.wifiaudiostreaming.ACTION_MODE_SEND" />
+                <action android:name="com.cuscus.wifiaudiostreaming.ACTION_MODE_RECEIVE" />
+                <action android:name="com.cuscus.wifiaudiostreaming.ACTION_MODE_OFF" />
             </intent-filter>
         </receiver>
 

@@ -57,6 +57,7 @@ class AutoConnectService : Service() {
     @SuppressLint("MissingPermission")
     override fun onCreate() {
         super.onCreate()
+        RoleSelectionGate.initialize(applicationContext)
         NotificationCenter.ensureChannels(this)
 
         val notification = buildNotification(getString(R.string.auto_connect_listening), false)

@@ -64,6 +64,7 @@ object ClientSessionController {
     fun connect(context: Context, serverInfo: ServerInfo, presharedKey: String? = null) {
         val app = context.applicationContext
         appContext = app
+        NetworkManager.startNetworkWatch(app)
         RoleSelectionGate.selectReceiver()
         StreamingActionReceiver.clearTaskRemovedStop(app)
 
@@ -97,6 +98,7 @@ object ClientSessionController {
     fun resumeIfNeeded(context: Context) {
         val app = context.applicationContext
         appContext = app
+        NetworkManager.startNetworkWatch(app)
         if (!RoleSelectionGate.isReceiverSelected()) {
             Log.i(TAG, "receiver restore suppressed until Receive is explicitly selected")
             return

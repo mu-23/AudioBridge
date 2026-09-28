@@ -235,6 +235,12 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         StreamingActionReceiver.clearTaskRemovedStop(this)
+        RoleSelectionGate.initialize(applicationContext)
+        NotificationCenter.ensureChannels(this)
+        NotificationCenter.postModeControl(this)
+        if (RoleSelectionGate.isReceiverSelected()) {
+            RuntimeModeController.selectReceiver(applicationContext)
+        }
         actionBar?.hide()
 
         NetworkManager.prewarmAudio()
@@ -625,7 +631,6 @@ class MainActivity : AppCompatActivity() {
             onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
         }
 
-        ClientDiscoveryHandler()
 
         val protocolMismatch by viewModel.protocolMismatch.collectAsStateWithLifecycle()
         protocolMismatch?.let { mismatch ->
@@ -785,12 +790,13 @@ class MainActivity : AppCompatActivity() {
         ExpressiveHomeScreen(
             appSettings = currentSettings,
             isServer = isServer,
+            selectedRole = selectedRole,
             isStreaming = isStreaming,
             connectionStatus = connectionStatus,
             discoveredDevices = discoveredDevices,
             isMulticastMode = isMulticastMode,
             localIp = localIp,
-            onToggleMode = viewModel::toggleMode,
+            onSelectMode = viewModel::selectMode,
             onStartServer = {
                 startServerRequest()
             },

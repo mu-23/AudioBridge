@@ -38,11 +38,13 @@ object NotificationCenter {
     const val ID_AUTOMATION_BLOCKED = 401
     const val ID_SNAPCAST = 501
     const val ID_RTP = 601
+    const val ID_CONTROL = 701
 
     const val CHANNEL_SERVER = "wfas_server_v3"
     const val CHANNEL_CLIENT = "wfas_client_v3"
     const val CHANNEL_AUTO_CONNECT = "wfas_auto_connect_v3"
     const val CHANNEL_AUTOMATION = "wfas_automation_v1"
+    const val CHANNEL_CONTROL = "audiobridge_control_v1"
 
     const val MIN_VOLUME = 0.0f
     const val MAX_VOLUME = 2.0f
@@ -59,6 +61,9 @@ object NotificationCenter {
     private const val REQ_CLIENT_VOLUME_UP = 5
     private const val REQ_SERVER_VOLUME_POPUP = 6
     private const val REQ_CLIENT_VOLUME_POPUP = 7
+    private const val REQ_MODE_SEND = 8
+    private const val REQ_MODE_RECEIVE = 9
+    private const val REQ_MODE_OFF = 10
 
     private val obsoleteChannels = listOf(
         "audio_stream_channel_v2",
@@ -94,6 +99,12 @@ object NotificationCenter {
                     CHANNEL_AUTOMATION,
                     R.string.notif_channel_automation_name,
                     R.string.notif_channel_automation_desc
+                ),
+                silentChannel(
+                    context,
+                    CHANNEL_CONTROL,
+                    R.string.notif_channel_control_name,
+                    R.string.notif_channel_control_desc
                 )
             )
         )
@@ -273,6 +284,61 @@ object NotificationCenter {
         if (streaming) builder.addAction(stopAction(context))
 
         return builder.build()
+    }
+
+    fun postModeControl(context: Context) {
+        if (!canPost(context)) return
+        post(context, ID_CONTROL, modeControlNotification(context))
+    }
+
+    fun modeControlNotification(context: Context): Notification {
+        RoleSelectionGate.initialize(context.applicationContext)
+        val role = RoleSelectionGate.role.value
+        val icon = when (role) {
+            RoleSelectionGate.Role.SENDER -> R.drawable.ic_notif_stream
+            RoleSelectionGate.Role.RECEIVER -> R.drawable.ic_notif_client
+            RoleSelectionGate.Role.OFF -> R.drawable.ic_notif_stop
+        }
+        val text = when (role) {
+            RoleSelectionGate.Role.SENDER -> context.getString(R.string.notif_mode_send)
+            RoleSelectionGate.Role.RECEIVER -> context.getString(R.string.notif_mode_receive)
+            RoleSelectionGate.Role.OFF -> context.getString(R.string.notif_mode_off)
+        }
+
+        return NotificationCompat.Builder(context, CHANNEL_CONTROL)
+            .setSmallIcon(icon)
+            .setColor(ContextCompat.getColor(context, R.color.notif_accent))
+            .setContentIntent(openApp(context))
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentTitle(context.getString(R.string.notif_mode_control_title))
+            .setContentText(text)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setLocalOnly(true)
+            .setShowWhen(false)
+            .addAction(
+                NotificationCompat.Action.Builder(
+                    IconCompat.createWithResource(context, R.drawable.ic_notif_stream),
+                    context.getString(R.string.send_title),
+                    broadcast(context, REQ_MODE_SEND, StreamingActionReceiver.ACTION_MODE_SEND)
+                ).build()
+            )
+            .addAction(
+                NotificationCompat.Action.Builder(
+                    IconCompat.createWithResource(context, R.drawable.ic_notif_client),
+                    context.getString(R.string.receive_title),
+                    broadcast(context, REQ_MODE_RECEIVE, StreamingActionReceiver.ACTION_MODE_RECEIVE)
+                ).build()
+            )
+            .addAction(
+                NotificationCompat.Action.Builder(
+                    IconCompat.createWithResource(context, R.drawable.ic_notif_stop),
+                    context.getString(R.string.close),
+                    broadcast(context, REQ_MODE_OFF, StreamingActionReceiver.ACTION_MODE_OFF)
+                ).build()
+            )
+            .build()
     }
 
     // Un comando esterno rifiutato non deve sparire in silenzio: l'utente che ha

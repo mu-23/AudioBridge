@@ -400,7 +400,7 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
                     Thread.sleep(1000);
                     sendText(s, client.get(), "PING");
                     if (pongCapable.get() &&
-                            System.currentTimeMillis() - lastClientActivityAt.get() > 6_000L) {
+                            System.currentTimeMillis() - lastClientActivityAt.get() > 30_000L) {
                         Log.w(TAG, "client heartbeat timed out; releasing session");
                         sessionAlive.set(false);
                         break;

@@ -18,6 +18,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import com.cuscus.wifiaudiostreaming.NetworkManager
 import com.cuscus.wifiaudiostreaming.NotificationCenter
+import com.cuscus.wifiaudiostreaming.RoleSelectionGate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -42,7 +43,11 @@ class ShizukuBridgeHostService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (StreamingActionReceiver.wasRecentlyTaskRemoved(this)) {
+        RoleSelectionGate.initialize(applicationContext)
+        if (
+            StreamingActionReceiver.wasRecentlyTaskRemoved(this) ||
+            !RoleSelectionGate.isSenderSelected()
+        ) {
             stopSelf()
             return START_NOT_STICKY
         }

@@ -1,0 +1,51 @@
+name: Publish Android test 1.3.1 test 8
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/publish-test-1.3.1-test.8.yml"
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download exact Stable-153-signed test artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          gh run download 36323933449 \
+            --repo "${{ github.repository }}" \
+            --name "AudioBridge-Android-Test-1.3.1" \
+            --dir release-assets
+          test -f release-assets/AudioBridge-Android-Test-1.3.1-test.8.apk
+
+      - name: Create test tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! gh api "repos/$REPO/git/ref/tags/v1.3.1-test.8" >/dev/null 2>&1; then
+            gh api --method POST "repos/$REPO/git/refs" \
+              -f ref="refs/tags/v1.3.1-test.8" \
+              -f sha="8f5ccb0c7e89d2e0e7f9784206bfee8047612c90"
+          fi
+
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create v1.3.1-test.8 \
+            release-assets/AudioBridge-Android-Test-1.3.1-test.8.apk \
+            --repo "${{ github.repository }}" \
+            --title "AudioBridge v1.3.1-test.8" \
+            --notes "Test build signed with the exact Stable #153 signing identity. Default mode is Sender, but sending does not start until the user taps Start. Switching to Receiver enables receiver auto-connect/reconnect; switching Receiver -> Sender immediately ends receiver ownership and services without auto-starting sending. Switching Sender -> Receiver first stops the active sender. Includes the task-removal recovery and non-focus-stealing overlay volume slider fixes. Stable #153 remains the latest stable release." \
+            --prerelease

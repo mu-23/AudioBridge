@@ -220,7 +220,7 @@ object NetworkManager {
     private val snapcastLifecycleMutex = kotlinx.coroutines.sync.Mutex()
     private val dlnaLifecycleMutex = kotlinx.coroutines.sync.Mutex()
     private const val DLNA_STOP_TIMEOUT_MS = 4000L
-    private const val MULTICAST_SILENCE_TIMEOUT_MS = 6000L
+    private const val MULTICAST_SILENCE_TIMEOUT_MS = 30_000L
     // How long an issued auth challenge stays answerable. Long enough for a round
     // trip on a bad link, short enough that an unanswered one does not linger as
     // something to answer later.
@@ -2517,7 +2517,7 @@ object NetworkManager {
                         // a short scheduler/network stall could tear down an otherwise
                         // healthy session. PING is sent every second, so 8 seconds still
                         // detects a real loss quickly while tolerating transient jitter.
-                        val serverActivityTimeoutMs = 8000L
+                        val serverActivityTimeoutMs = 30_000L
 
                         val MAGIC_0: Byte = 0x57
                         val MAGIC_1: Byte = 0x46

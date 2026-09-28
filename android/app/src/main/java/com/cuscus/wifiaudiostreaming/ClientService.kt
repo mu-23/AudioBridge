@@ -49,6 +49,12 @@ class ClientService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        // A sticky service restart must not depend on MainActivity being opened.
+        // Recreate the process-wide network watcher here so reconnect can recover
+        // after Android kills/restarts the app process in background.
+        NetworkManager.prewarmAudio()
+        NetworkManager.startNetworkWatch(applicationContext)
+
         if (!NotificationCenter.canPost(this)) {
             Toast.makeText(this, "Notifications permission missing", Toast.LENGTH_SHORT).show()
             stopSelf()

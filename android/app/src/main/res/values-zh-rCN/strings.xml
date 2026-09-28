@@ -545,6 +545,12 @@
     <string name="notif_channel_auto_connect_desc">在后台搜索已标星的服务器。</string>
     <string name="notif_channel_automation_name">自动化</string>
     <string name="notif_channel_automation_desc">提示被拒绝的外部命令。</string>
+    <string name="notif_channel_control_name">AudioBridge 快捷控制</string>
+    <string name="notif_channel_control_desc">在通知栏直接切换发送、接收或关闭。</string>
+    <string name="notif_mode_control_title">AudioBridge 模式</string>
+    <string name="notif_mode_off">当前：关闭</string>
+    <string name="notif_mode_send">当前：发送</string>
+    <string name="notif_mode_receive">当前：接收</string>
     <string name="notif_automation_blocked_title">外部命令已阻止</string>
     <string name="notif_automation_blocked_token">收到一条没有有效令牌的命令，因此未执行。请打开“自动化与脚本”，将当前令牌复制到你的自动化配置中。</string>
     <string name="notif_automation_blocked_disabled">外部命令关闭时收到了一条命令。如果这是你预期的操作，请在“自动化与脚本”中重新启用外部命令。</string>

@@ -43,25 +43,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          cat > release-notes.md <<'EOF'
+          Test build signed with the exact Stable #153 signing identity.
+
+          Receiver reliability changes:
+          - RECEIVE is now a durable foreground mode and stays alive even with no current audio/sender.
+          - Background reconnect no longer depends on opening MainActivity.
+          - Network watch and discovery recovery are owned by background services.
+          - Client transport loss no longer tears down the whole runtime state.
+          - Heartbeat loss tolerance is widened to reduce false disconnects during mobile scheduler/Wi-Fi stalls.
+          - AutoConnect and persistent receiver discovery no longer fight over discovery ownership.
+
+          Controls:
+          - Explicit OFF / SEND / RECEIVE runtime states.
+          - Persistent notification quick controls for Send / Receive / Off.
+          - OFF stops both directions but preserves the remembered receiver target.
+          - Existing Lower / Louder and tap-for-volume controls remain separate.
+
+          Stable #153 remains the latest stable release.
+          EOF
           gh release create v1.3.1-test.10 \
             release-assets/AudioBridge-Android-Test-1.3.1-test.10.apk \
             --repo "${{ github.repository }}" \
             --title "AudioBridge v1.3.1-test.10" \
-            --notes "Test build signed with the exact Stable #153 signing identity.
-
-Receiver reliability changes:
-- RECEIVE is now a durable foreground mode and stays alive even with no current audio/sender.
-- Background reconnect no longer depends on opening MainActivity.
-- Network watch and discovery recovery are owned by background services.
-- Client transport loss no longer tears down the whole runtime state.
-- Heartbeat loss tolerance is widened to reduce false disconnects during mobile scheduler/Wi-Fi stalls.
-- AutoConnect and persistent receiver discovery no longer fight over discovery ownership.
-
-Controls:
-- Explicit OFF / SEND / RECEIVE runtime states.
-- Persistent notification quick controls for Send / Receive / Off.
-- OFF stops both directions but preserves the remembered receiver target.
-- Existing Lower / Louder and tap-for-volume controls remain separate.
-
-Stable #153 remains the latest stable release." \
+            --notes-file release-notes.md \
             --prerelease

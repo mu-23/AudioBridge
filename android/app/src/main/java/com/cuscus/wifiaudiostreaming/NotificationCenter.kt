@@ -288,6 +288,7 @@ object NotificationCenter {
 
     fun postModeControl(context: Context) {
         if (!canPost(context)) return
+        ensureChannels(context)
         post(context, ID_CONTROL, modeControlNotification(context))
     }
 

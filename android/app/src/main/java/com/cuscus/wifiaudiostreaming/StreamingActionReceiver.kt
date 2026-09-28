@@ -21,7 +21,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
-import com.cuscus.wifiaudiostreaming.shizuku.ShizukuAudioBridgeManager
 
 class StreamingActionReceiver : BroadcastReceiver() {
 
@@ -40,6 +39,9 @@ class StreamingActionReceiver : BroadcastReceiver() {
                 context,
                 VolumeOverlayController.MODE_CLIENT
             )
+            ACTION_MODE_SEND -> RuntimeModeController.startSender(context)
+            ACTION_MODE_RECEIVE -> RuntimeModeController.selectReceiver(context)
+            ACTION_MODE_OFF -> RuntimeModeController.selectOff(context)
         }
     }
 
@@ -67,6 +69,12 @@ class StreamingActionReceiver : BroadcastReceiver() {
             "com.cuscus.wifiaudiostreaming.ACTION_SHOW_SERVER_VOLUME"
         const val ACTION_SHOW_CLIENT_VOLUME =
             "com.cuscus.wifiaudiostreaming.ACTION_SHOW_CLIENT_VOLUME"
+        const val ACTION_MODE_SEND =
+            "com.cuscus.wifiaudiostreaming.ACTION_MODE_SEND"
+        const val ACTION_MODE_RECEIVE =
+            "com.cuscus.wifiaudiostreaming.ACTION_MODE_RECEIVE"
+        const val ACTION_MODE_OFF =
+            "com.cuscus.wifiaudiostreaming.ACTION_MODE_OFF"
 
         private const val TASK_PREFS = "wfas_task_runtime"
         private const val KEY_TASK_REMOVED_AT = "task_removed_at"
@@ -117,17 +125,9 @@ class StreamingActionReceiver : BroadcastReceiver() {
          * unlike silence, network loss or normal process recreation.
          */
         fun stopEverything(context: Context) {
-            val app = context.applicationContext
-            ClientSessionController.userDisconnect(app)
-            ShizukuAudioBridgeManager.stop(app)
-            NetworkManager.stopStreaming(app)
-            app.stopService(Intent(app, AudioCaptureService::class.java))
-            app.stopService(Intent(app, ClientService::class.java))
-            app.stopService(Intent(app, AutoConnectService::class.java))
-            app.stopService(Intent(app, SnapcastClientService::class.java))
-            app.stopService(Intent(app, RtpClientService::class.java))
-            VolumeOverlayController.dismiss()
-            NotificationCenter.cancelAll(app)
+            // Stop means enter the explicit OFF state. Keep the remembered
+            // receiver target so a later Receive action can reconnect instantly.
+            RuntimeModeController.selectOff(context.applicationContext)
         }
     }
 }

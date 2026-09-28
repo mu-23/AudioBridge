@@ -43,6 +43,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _isServer = MutableStateFlow(true)
 
+    init {
+        RoleSelectionGate.initialize(application)
+        _isServer.value = RoleSelectionGate.role.value != RoleSelectionGate.Role.RECEIVER
+    }
+
     // Il ruolo si fissa quando lo stream parte e non cambia piu' finche' dura.
     // Derivarlo di continuo da NetworkManager.isServerStreaming, che e' un var
     // normale e viene azzerato durante il teardown, faceva saltare la UI in
@@ -254,43 +259,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         effectiveMulticast(settings, multicast)
     )
 
-    fun toggleMode(isServerMode: Boolean) {
+    fun selectMode(role: RoleSelectionGate.Role) {
         val app = getApplication<Application>()
-        val wasServerMode = _isServer.value
+        when (role) {
+            RoleSelectionGate.Role.RECEIVER -> {
+                _isServer.value = false
+                RuntimeModeController.selectReceiver(app)
+            }
 
-        if (wasServerMode != isServerMode) {
-            if (isServerMode) {
-                // Receive -> Send is an explicit end of the receiver session.
-                // Stop all receiver ownership immediately, but do NOT auto-start sending.
-                ClientSessionController.userDisconnect(app)
-                NetworkManager.stopStreaming(app)
-                app.stopService(Intent(app, ClientService::class.java))
-                app.stopService(Intent(app, AutoConnectService::class.java))
-                app.stopService(Intent(app, SnapcastClientService::class.java))
-                app.stopService(Intent(app, RtpClientService::class.java))
-                NotificationCenter.cancel(app, NotificationCenter.ID_CLIENT)
-                setIsStreaming(false)
-            } else {
-                // Send -> Receive must stop the active sender first so both roles
-                // cannot continue running behind the same UI.
-                if (ShizukuAudioBridgeManager.isActive()) {
-                    ShizukuAudioBridgeManager.stop(app)
-                }
-                NetworkManager.stopStreaming(app)
-                app.stopService(Intent(app, AudioCaptureService::class.java))
-                NotificationCenter.cancel(app, NotificationCenter.ID_SERVER)
+            RoleSelectionGate.Role.SENDER -> {
+                _isServer.value = true
+                RuntimeModeController.selectSenderIdle(app)
+                clearDiscoveredDevices()
+            }
+
+            RoleSelectionGate.Role.OFF -> {
+                _isServer.value = true
+                RuntimeModeController.selectOff(app)
                 setIsStreaming(false)
             }
         }
+    }
 
-        _isServer.value = isServerMode
-        if (isServerMode) {
-            RoleSelectionGate.selectSender()
-            NetworkManager.stopListeningForDevices()
-            clearDiscoveredDevices()
-        } else {
-            RoleSelectionGate.selectReceiver()
-        }
+    fun toggleMode(isServerMode: Boolean) {
+        selectMode(
+            if (isServerMode) RoleSelectionGate.Role.SENDER
+            else RoleSelectionGate.Role.RECEIVER
+        )
     }
 
     fun setMulticastMode(isMulticast: Boolean) {
@@ -769,19 +764,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun stopStreaming() {
-        val app = getApplication<Application>()
-        // Only an explicit user stop clears persistent client/server intents.
-        ClientSessionController.userDisconnect(app)
-        if (ShizukuAudioBridgeManager.isActive()) {
-            ShizukuAudioBridgeManager.stop(app)
-        }
-
+        RuntimeModeController.selectOff(getApplication<Application>())
         setIsStreaming(false)
-        NetworkManager.stopStreaming(app)
-        app.stopService(Intent(app, ClientService::class.java))
-        app.stopService(Intent(app, AudioCaptureService::class.java))
-        NotificationCenter.cancel(app, NotificationCenter.ID_SERVER)
-        NotificationCenter.cancel(app, NotificationCenter.ID_CLIENT)
         restoreForcedEncryption()
     }
 

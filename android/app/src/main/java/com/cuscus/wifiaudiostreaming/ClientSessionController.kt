@@ -60,6 +60,20 @@ object ClientSessionController {
     fun hasReconnectIntent(context: Context): Boolean =
         desiredConnected || restoreDesiredTarget(context.applicationContext) != null
 
+    fun hasRememberedTarget(context: Context): Boolean =
+        desiredTarget != null || restoreDesiredTarget(context.applicationContext) != null
+
+    @SuppressLint("MissingPermission")
+    fun enterReceiverMode(context: Context) {
+        val app = context.applicationContext
+        appContext = app
+        RoleSelectionGate.initialize(app)
+        RoleSelectionGate.selectReceiver(app)
+        NetworkManager.startNetworkWatch(app)
+        ensureClientService(app)
+        resumeIfNeeded(app)
+    }
+
     @SuppressLint("MissingPermission")
     fun connect(context: Context, serverInfo: ServerInfo, presharedKey: String? = null) {
         val app = context.applicationContext
@@ -138,10 +152,9 @@ object ClientSessionController {
      * Explicit UI/user stop. This is the operation that ends the logical
      * connection intent; transport timeouts do not call this.
      */
-    fun userDisconnect(context: Context? = null) {
-        val clearContext = context?.applicationContext ?: appContext
+    fun pauseKeepTarget(context: Context? = null) {
+        context?.applicationContext?.let { appContext = it }
         desiredConnected = false
-        desiredTarget = null
         generation += 1
         reconnectAttempt = 0
         attemptInFlight = false
@@ -151,12 +164,19 @@ object ClientSessionController {
         statusJob = null
         restoreJob?.cancel()
         restoreJob = null
-        clearContext?.let(::clearDesiredTarget)
         if (reconnectOwnsDiscovery) {
             NetworkManager.stopListeningForDevices()
             reconnectOwnsDiscovery = false
         }
-        Log.i(TAG, "logical client session ended by explicit user stop")
+        Log.i(TAG, "receiver paused; remembered target preserved")
+    }
+
+    fun userDisconnect(context: Context? = null) {
+        val clearContext = context?.applicationContext ?: appContext
+        pauseKeepTarget(context)
+        desiredTarget = null
+        clearContext?.let(::clearDesiredTarget)
+        Log.i(TAG, "logical client target forgotten by explicit disconnect")
     }
 
     @SuppressLint("MissingPermission")

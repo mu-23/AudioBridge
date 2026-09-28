@@ -2236,7 +2236,7 @@ object NetworkManager {
             return
         }
 
-        stopStreaming(context)
+        prepareClientTransportAttempt(context)
         openStreamGeneration()
         isServerStreaming = false
         activePeerIp = serverInfo.ip
@@ -3188,10 +3188,12 @@ object NetworkManager {
                 ) {
                     playDisconnectionSound(context)
                 }
-                if (isStreamingCurrent.value) {
+                val shouldNotifySessionOwner =
+                    isStreamingCurrent.value || ClientSessionController.wantsConnection()
+                if (shouldNotifySessionOwner) {
                     scope.launch(Dispatchers.Main) {
                         val currentStatus = connectionStatus.value
-                        stopStreaming(context)
+                        finishClientTransportAttempt()
 
                         val contactingPrefix = context.getString(R.string.status_contacting_server, "").substringBefore("%")
                         val waitingClientPrefix = context.getString(R.string.status_waiting_for_client, 0).substringBefore("%")
@@ -3212,6 +3214,40 @@ object NetworkManager {
                 }
             }
         }
+    }
+
+    private fun prepareClientTransportAttempt(context: Context) {
+        // Starting/retrying a receiver session must not run the full global stop
+        // path: that path also tears down sender-side/global state and used to
+        // make a recoverable UDP timeout look like the receiver itself stopped.
+        if (isServerStreaming) {
+            stopStreaming(context)
+            return
+        }
+
+        streamingJob?.takeIf { it.isActive }?.cancel()
+        micStreamingJob?.cancel()
+        micStreamingJob = null
+        micSendDir = null
+        activePeerIp = null
+        unicastPeerConnected.value = false
+        sessionEncryptedLive.value = false
+        isMicMuted.value = false
+        isStreamingCurrent.value = false
+    }
+
+    private fun finishClientTransportAttempt() {
+        // End only this transport attempt. The logical RECEIVE mode and its
+        // remembered target belong to ClientSessionController and stay alive.
+        activePeerIp = null
+        unicastPeerConnected.value = false
+        sessionEncryptedLive.value = false
+        micStreamingJob?.cancel()
+        micStreamingJob = null
+        micSendDir = null
+        isMicMuted.value = false
+        streamingJob = null
+        isStreamingCurrent.value = false
     }
 
     fun stopStreaming(context: Context) {

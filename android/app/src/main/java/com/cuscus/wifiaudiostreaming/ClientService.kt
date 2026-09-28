@@ -26,10 +26,13 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.widget.Toast
 import com.cuscus.wifiaudiostreaming.NetworkManager.updateWidgetState
+import com.cuscus.wifiaudiostreaming.data.SettingsDataStore
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 
 class ClientService : Service() {
 
@@ -37,14 +40,15 @@ class ClientService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
     private var statusJob: Job? = null
+    private var recoveryJob: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        RoleSelectionGate.initialize(applicationContext)
         if (
             StreamingActionReceiver.wasRecentlyTaskRemoved(this) ||
-            !RoleSelectionGate.isReceiverSelected() ||
-            !ClientSessionController.hasReconnectIntent(this)
+            !RoleSelectionGate.isReceiverSelected()
         ) {
             stopSelf()
             return START_NOT_STICKY
@@ -103,6 +107,30 @@ class ClientService : Service() {
             }
         }
 
+        // RECEIVE is a durable mode, not just an active socket. Keep discovery
+        // and reconnect alive even when there is currently no sender or no audio.
+        if (recoveryJob?.isActive != true) {
+            recoveryJob = serviceScope.launch {
+                combine(
+                    NetworkManager.networkRevision,
+                    NetworkManager.isStreamingCurrent
+                ) { revision, streaming -> revision to streaming }
+                    .distinctUntilChanged()
+                    .collectLatest { (_, streaming) ->
+                        if (!RoleSelectionGate.isReceiverSelected()) return@collectLatest
+                        if (!streaming) {
+                            val settings = SettingsDataStore(applicationContext)
+                                .settingsFlow.first()
+                            NetworkManager.restartListeningForDevices(
+                                applicationContext,
+                                settings.networkInterface
+                            )
+                            ClientSessionController.resumeIfNeeded(this@ClientService)
+                        }
+                    }
+            }
+        }
+
         // A sticky service restart must preserve the user's desire to stay
         // connected. Reconnect ownership is process-wide, not tied to the UI.
         ClientSessionController.resumeIfNeeded(this)
@@ -153,6 +181,7 @@ class ClientService : Service() {
         wakeLock = null
         wifiLock = null
         statusJob = null
+        recoveryJob = null
         serviceScope.cancel()
         stopForeground(STOP_FOREGROUND_REMOVE)
         NotificationCenter.cancel(this, NotificationCenter.ID_CLIENT)

@@ -119,12 +119,14 @@ class ClientService : Service() {
                     .collectLatest { (_, streaming) ->
                         if (!RoleSelectionGate.isReceiverSelected()) return@collectLatest
                         if (!streaming) {
-                            val settings = SettingsDataStore(applicationContext)
-                                .settingsFlow.first()
-                            NetworkManager.restartListeningForDevices(
-                                applicationContext,
-                                settings.networkInterface
-                            )
+                            if (!NetworkManager.autoConnectOwnsListening) {
+                                val settings = SettingsDataStore(applicationContext)
+                                    .settingsFlow.first()
+                                NetworkManager.restartListeningForDevices(
+                                    applicationContext,
+                                    settings.networkInterface
+                                )
+                            }
                             ClientSessionController.resumeIfNeeded(this@ClientService)
                         }
                     }

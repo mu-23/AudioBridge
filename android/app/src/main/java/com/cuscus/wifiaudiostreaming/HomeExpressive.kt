@@ -184,13 +184,14 @@ private enum class HeroPhase { Configuring, Ready, Searching, Live }
 fun ExpressiveHomeScreen(
     appSettings: AppSettings,
     isServer: Boolean,
+    selectedRole: RoleSelectionGate.Role,
     isStreaming: Boolean,
     connectionStatus: String,
     discoveredDevices: Map<String, ServerInfo>,
     isMulticastMode: Boolean,
     localIp: String,
     onMulticastModeChange: (Boolean) -> Unit,
-    onToggleMode: (Boolean) -> Unit,
+    onSelectMode: (RoleSelectionGate.Role) -> Unit,
     onStartServer: () -> Unit,
     onStopServer: () -> Unit,
     onConnect: (ServerInfo) -> Unit,
@@ -434,11 +435,11 @@ fun ExpressiveHomeScreen(
             ) {
                 Column {
                     ModeSwitcher(
-                        isServer = isServer,
+                        selectedRole = selectedRole,
                         enabled = !live,
-                        onToggleMode = { serverMode ->
-                            onToggleMode(serverMode)
-                            if (!serverMode) onRefresh()
+                        onSelectMode = { role ->
+                            onSelectMode(role)
+                            if (role == RoleSelectionGate.Role.RECEIVER) onRefresh()
                         }
                     )
                     Spacer(Modifier.height(28.dp))
@@ -1320,36 +1321,55 @@ private fun HeroActionButton(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ModeSwitcher(
-    isServer: Boolean,
+    selectedRole: RoleSelectionGate.Role,
     enabled: Boolean,
-    onToggleMode: (Boolean) -> Unit
+    onSelectMode: (RoleSelectionGate.Role) -> Unit
 ) {
+    val selectedColors = ButtonDefaults.filledTonalButtonColors(
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    )
+    val normalColors = ButtonDefaults.filledTonalButtonColors()
+
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        ExpressiveModeButton(
-            icon = Icons.Outlined.Download,
-            selectedIcon = Icons.Outlined.Download,
-            title = stringResource(R.string.receive_title),
-            subtitle = stringResource(R.string.receive_subtitle),
-            isSelected = !isServer,
-            onClick = { onToggleMode(false) },
+        FilledTonalButton(
+            onClick = { onSelectMode(RoleSelectionGate.Role.SENDER) },
             enabled = enabled,
-            modifier = Modifier.weight(1f),
-            shapes = ButtonGroupDefaults.connectedLeadingButtonShapes()
-        )
-        ExpressiveModeButton(
-            icon = Icons.Outlined.Upload,
-            selectedIcon = Icons.Outlined.Upload,
-            title = stringResource(R.string.send_title),
-            subtitle = stringResource(R.string.send_subtitle),
-            isSelected = isServer,
-            onClick = { onToggleMode(true) },
+            colors = if (selectedRole == RoleSelectionGate.Role.SENDER) selectedColors else normalColors,
+            shape = RoundedCornerShape(18.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(Icons.Outlined.Upload, contentDescription = null)
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.send_title))
+        }
+
+        FilledTonalButton(
+            onClick = { onSelectMode(RoleSelectionGate.Role.RECEIVER) },
             enabled = enabled,
-            modifier = Modifier.weight(1f),
-            shapes = ButtonGroupDefaults.connectedTrailingButtonShapes()
-        )
+            colors = if (selectedRole == RoleSelectionGate.Role.RECEIVER) selectedColors else normalColors,
+            shape = RoundedCornerShape(18.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(Icons.Outlined.Download, contentDescription = null)
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.receive_title))
+        }
+
+        FilledTonalButton(
+            onClick = { onSelectMode(RoleSelectionGate.Role.OFF) },
+            enabled = enabled,
+            colors = if (selectedRole == RoleSelectionGate.Role.OFF) selectedColors else normalColors,
+            shape = RoundedCornerShape(18.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(Icons.Filled.Stop, contentDescription = null)
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.close))
+        }
     }
 }
 

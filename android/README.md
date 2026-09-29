@@ -198,7 +198,7 @@ WFAS 支持可选的连接认证和加密：
 
 协议细节见：
 
-[`WFAS_PROTOCOL.md`](WFAS_PROTOCOL.md)
+[`WFAS_PROTOCOL.md`](../WFAS_PROTOCOL.md)
 
 ---
 

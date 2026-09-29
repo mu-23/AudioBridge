@@ -2320,7 +2320,7 @@ object NetworkManager {
                         // Headroom: la coda di AudioTrack deve poter assorbire un burst senza
                         // bloccare la write, altrimenti l'arretrato migra nel socket dove non e'
                         // misurabile. Il livello reale lo tiene PlayoutGovernor scartando pacchetti.
-                        val headroomFrames = sampleRate * 200 / 1000
+                        val headroomFrames = sampleRate * 80 / 1000
                         var playbackBufferSize = minBuffer.coerceAtLeast((targetLatencyFrames + headroomFrames) * frameSize)
                         if (playbackBufferSize % frameSize != 0) {
                             playbackBufferSize += frameSize - (playbackBufferSize % frameSize)
@@ -2351,7 +2351,7 @@ object NetworkManager {
                             audioTrack!!, sampleRate, frameSize, effectiveLatencyMs, TAG
                         )
 
-                        val prerollLen = (sampleRate * frameSize * 30 / 1000)
+                        val prerollLen = (sampleRate * frameSize * 10 / 1000)
                             .coerceIn(0, playbackBufferSize - frameSize)
                             .let { it - (it % frameSize) }
                         if (prerollLen > 0) {
@@ -2828,7 +2828,7 @@ object NetworkManager {
                         )
                         val frameSize = if (channelConfig == "STEREO") 4 else 2
                         var playbackBufferSize = minBuffer.coerceAtLeast(
-                            (mcLatencyMs + 200) * sampleRate / 1000 * frameSize
+                            (mcLatencyMs + 80) * sampleRate / 1000 * frameSize
                         )
 
                         if (playbackBufferSize % frameSize != 0) {

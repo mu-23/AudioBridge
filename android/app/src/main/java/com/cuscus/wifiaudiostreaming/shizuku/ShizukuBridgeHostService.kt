@@ -151,6 +151,7 @@ class ShizukuBridgeHostService : Service() {
     }
 
     override fun onDestroy() {
+        StreamingActionReceiver.handleStoppedWithTask(this)
         runCatching { wakeLock?.takeIf { it.isHeld }?.release() }
         runCatching { wifiLock?.takeIf { it.isHeld }?.release() }
         wakeLock = null

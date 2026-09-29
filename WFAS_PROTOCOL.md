@@ -192,8 +192,8 @@ In both cases the device running the **newer** build stops the stream and shows:
 > [ Open downloads ]
 
 Download links:
-* Desktop: <https://github.com/mu-23/WiFiAudioStreaming/releases>
-* Android: <https://github.com/mu-23/WiFiAudioStreaming/releases>
+* Desktop: <https://github.com/mu23XR/AudioBridge/releases>
+* Android: <https://github.com/mu23XR/AudioBridge/releases>
 
 Each app's dialog links to **its own** releases page (the app the user is
 currently looking at), and the text reminds them to update both ends.

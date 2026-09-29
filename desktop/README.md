@@ -86,7 +86,7 @@ https://private-user-images.githubusercontent.com/229497341/628825916-c36bb746-a
   Peers running an incompatible protocol version are rejected immediately during the handshake with a clear error, instead of hanging silently.
 
 - **Security & Encryption**
-  Optionally gate who can connect (**Off**, **Ask** to approve each device, or **Key** for a pre-shared password checked via mutual HMAC-SHA256 challenge-response) and encrypt the audio end-to-end with **ChaCha20-Poly1305** (per-packet AEAD, anti-replay, keys derived via HKDF). Works for both unicast and multicast; no PKI required. See [`WFAS_PROTOCOL.md`](WFAS_PROTOCOL.md) §7–8.
+  Optionally gate who can connect (**Off**, **Ask** to approve each device, or **Key** for a pre-shared password checked via mutual HMAC-SHA256 challenge-response) and encrypt the audio end-to-end with **ChaCha20-Poly1305** (per-packet AEAD, anti-replay, keys derived via HKDF). Works for both unicast and multicast; no PKI required. See [`WFAS_PROTOCOL.md`](../WFAS_PROTOCOL.md) §7–8.
 
 - **Firewall Assistant**
   On Windows, the app can create the required inbound firewall rule automatically with one click. On Linux, it detects `ufw` or `firewalld` and shows the exact command to open the required ports.

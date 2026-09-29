@@ -95,7 +95,7 @@ data class ChangelogItem(
     val linkUrl: String? = null
 )
 
-private const val ANDROID_RELEASES_URL = "https://github.com/mu-23/WiFiAudioStreaming/releases"
+private const val ANDROID_RELEASES_URL = "https://github.com/mu23XR/AudioBridge/releases"
 
 data class ChangelogEntry(
     val version: String,

@@ -94,12 +94,22 @@ class StreamingActionReceiver : BroadcastReceiver() {
 
             val app = context.applicationContext
             RoleSelectionGate.clear()
-            app.getSharedPreferences(TASK_PREFS, Context.MODE_PRIVATE)
+            markTaskRemoved(app)
+            stopEverything(app)
+        }
+
+        fun markTaskRemoved(context: Context) {
+            context.applicationContext
+                .getSharedPreferences(TASK_PREFS, Context.MODE_PRIVATE)
                 .edit()
                 .putLong(KEY_TASK_REMOVED_AT, System.currentTimeMillis())
                 .commit()
-            stopEverything(app)
         }
+
+        fun hasPendingTaskRemovedStop(context: Context): Boolean =
+            context.applicationContext
+                .getSharedPreferences(TASK_PREFS, Context.MODE_PRIVATE)
+                .getLong(KEY_TASK_REMOVED_AT, 0L) > 0L
 
         fun clearTaskRemovedStop(context: Context) {
             context.applicationContext

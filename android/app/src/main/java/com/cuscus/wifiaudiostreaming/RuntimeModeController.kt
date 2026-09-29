@@ -30,7 +30,7 @@ object RuntimeModeController {
 
     fun isSwitchingOff(): Boolean = switchingOff.get()
 
-    fun selectOff(context: Context) {
+    fun selectOff(context: Context, keepControlNotification: Boolean = true) {
         val app = context.applicationContext
         if (!switchingOff.compareAndSet(false, true)) return
         try {
@@ -54,7 +54,11 @@ object RuntimeModeController {
             NotificationCenter.cancel(app, NotificationCenter.ID_SERVER)
             NotificationCenter.cancel(app, NotificationCenter.ID_CLIENT)
             NotificationCenter.cancel(app, NotificationCenter.ID_AUTO_CONNECT)
-            NotificationCenter.postModeControl(app)
+            if (keepControlNotification) {
+                NotificationCenter.postModeControl(app)
+            } else {
+                NotificationCenter.cancel(app, NotificationCenter.ID_CONTROL)
+            }
         } finally {
             switchingOff.set(false)
         }

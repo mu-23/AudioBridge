@@ -17,6 +17,7 @@
 
 package com.cuscus.wifiaudiostreaming
 
+import android.app.ActivityManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -95,7 +96,7 @@ class StreamingActionReceiver : BroadcastReceiver() {
             val app = context.applicationContext
             RoleSelectionGate.clear()
             markTaskRemoved(app)
-            stopEverything(app)
+            RuntimeModeController.selectOff(app, keepControlNotification = false)
         }
 
         fun markTaskRemoved(context: Context) {
@@ -110,6 +111,23 @@ class StreamingActionReceiver : BroadcastReceiver() {
             context.applicationContext
                 .getSharedPreferences(TASK_PREFS, Context.MODE_PRIVATE)
                 .getLong(KEY_TASK_REMOVED_AT, 0L) > 0L
+
+        fun handleStoppedWithTask(context: Context) {
+            val app = context.applicationContext
+            if (RuntimeModeController.isSwitchingOff()) return
+
+            val taskGone = runCatching {
+                val am = app.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                am.appTasks.isEmpty()
+            }.getOrDefault(false)
+
+            if (!taskGone) return
+
+            markTaskRemoved(app)
+            RoleSelectionGate.initialize(app)
+            RoleSelectionGate.selectOff(app)
+            RuntimeModeController.selectOff(app, keepControlNotification = false)
+        }
 
         fun clearTaskRemovedStop(context: Context) {
             context.applicationContext

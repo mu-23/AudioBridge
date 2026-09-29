@@ -1,0 +1,70 @@
+name: Publish Android test 1.3.1 test 11
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/publish-test-1.3.1-test.11.yml"
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download exact Stable-153-signed test artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          gh run download 36523444154 \
+            --repo "${{ github.repository }}" \
+            --name "AudioBridge-Android-Test-1.3.1-test.11" \
+            --dir release-assets
+          test -f release-assets/AudioBridge-Android-Test-1.3.1-test.11.apk
+
+      - name: Create test tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! gh api "repos/$REPO/git/ref/tags/v1.3.1-test.11" >/dev/null 2>&1; then
+            gh api --method POST "repos/$REPO/git/refs" \
+              -f ref="refs/tags/v1.3.1-test.11" \
+              -f sha="83c9f880c748ac83a4576d46f7325b4f71d71c94"
+          fi
+
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cat > release-notes.md <<'EOF'
+          Test build signed with the exact Stable #153 signing identity.
+
+          Exit / audio-route cleanup:
+          - Swiping AudioBridge away from Recents is now an explicit OFF.
+          - Runtime services use Android stopWithTask so the OS stops them with the app task.
+          - Stopping no longer depends on the current process still remembering its Shizuku binding.
+          - Shizuku UserService is force-removed by UserServiceArgs even after app-process/binding loss.
+          - Destroying the privileged UserService releases capture/AudioPolicy and exits the shell process.
+          - OFF/task removal removes the quick-control notification.
+          - App startup scrubs stale Shizuku UserService/AudioPolicy left by older builds.
+
+          Background behavior:
+          - Home / lock screen keeps SEND or RECEIVE running.
+          - Swiping the app from Recents stops both directions.
+          - RECEIVE background recovery remains independent from MainActivity.
+
+          Stable #153 remains the latest stable release.
+          EOF
+          gh release create v1.3.1-test.11 \
+            release-assets/AudioBridge-Android-Test-1.3.1-test.11.apk \
+            --repo "${{ github.repository }}" \
+            --title "AudioBridge v1.3.1-test.11" \
+            --notes-file release-notes.md \
+            --prerelease

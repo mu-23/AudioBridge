@@ -1475,7 +1475,7 @@ fun SettingsScreenContent(
                         description = stringResource(R.string.source_code_view_on_github),
                         icon = Icons.Outlined.Code,
                         onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/mu-23/AudioBridge/"))
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/mu23XR/AudioBridge/"))
                             context.startActivity(intent)
                         }
                     )

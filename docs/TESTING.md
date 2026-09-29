@@ -41,3 +41,19 @@ When changing WFAS:
 - packet loss/reordering where applicable
 
 Wire-incompatible changes require a protocol-version bump.
+
+
+## Silent-source durability
+
+1. Start a Shizuku SEND/RECEIVE session.
+2. Stop all media playback on the sender without pressing OFF.
+3. Leave the source silent long enough to cross the old 30-second timeout.
+4. Confirm the session remains connected.
+5. Resume media playback and confirm audio returns without reconnecting.
+
+## Recents removal
+
+With SEND active, swipe the app from Recents without pressing OFF first.
+Confirm the receiver stops promptly and the sender's local audio route/volume is restored.
+This test is invalid if the service is configured with `stopWithTask=true`; the runtime
+services are intentionally configured to receive `onTaskRemoved()`.

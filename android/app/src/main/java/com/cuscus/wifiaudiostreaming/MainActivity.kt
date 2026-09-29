@@ -234,8 +234,27 @@ class MainActivity : AppCompatActivity() {
         }
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        StreamingActionReceiver.clearTaskRemovedStop(this)
         RoleSelectionGate.initialize(applicationContext)
+
+        // Upgrade/startup scrub: older builds could leave the privileged
+        // Shizuku UserService alive after the app task disappeared. If we are
+        // starting in OFF (or carrying a task-removal marker), force-remove
+        // that remote service before any new mode is entered so its AudioPolicy
+        // cannot keep diverting system playback.
+        if (
+            RoleSelectionGate.isOffSelected() ||
+            StreamingActionReceiver.hasPendingTaskRemovedStop(this)
+        ) {
+            ShizukuAudioBridgeManager.forceRemoveUserService(applicationContext)
+            RuntimeModeController.selectOff(
+                applicationContext,
+                keepControlNotification = false
+            )
+            StreamingActionReceiver.clearTaskRemovedStop(this)
+        } else {
+            StreamingActionReceiver.clearTaskRemovedStop(this)
+        }
+
         NotificationCenter.ensureChannels(this)
         NotificationCenter.postModeControl(this)
         if (RoleSelectionGate.isReceiverSelected()) {

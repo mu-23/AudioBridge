@@ -471,6 +471,7 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
         int seq = 0;
         long samplePosition = 0;
         long packets = 0;
+        long lastSilenceKeepaliveAt = 0L;
 
         try {
             while (running.get() && sessionAlive.get()) {
@@ -487,6 +488,30 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
                     throw new IllegalStateException("AudioRecord.read failed: " + read);
                 }
                 if (read == 0) {
+                    long now = System.currentTimeMillis();
+                    if (now - lastSilenceKeepaliveAt >= 1_000L) {
+                        byte[] keepalive = new byte[HEADER_SIZE];
+                        keepalive[0] = MAGIC_0;
+                        keepalive[1] = MAGIC_1;
+                        keepalive[2] = (byte) PROTOCOL_VERSION;
+                        keepalive[3] = 0x01; // silence/liveness, no PCM payload
+                        keepalive[4] = (byte) ((seq >>> 8) & 0xFF);
+                        keepalive[5] = (byte) (seq & 0xFF);
+                        ByteBuffer.wrap(keepalive, 6, 4)
+                                .order(ByteOrder.BIG_ENDIAN)
+                                .putInt((int) (samplePosition & 0xFFFFFFFFL));
+
+                        InetSocketAddress target = client.get();
+                        s.send(new DatagramPacket(
+                                keepalive,
+                                keepalive.length,
+                                target.getAddress(),
+                                target.getPort()
+                        ));
+                        seq = (seq + 1) & 0xFFFF;
+                        packets++;
+                        lastSilenceKeepaliveAt = now;
+                    }
                     try {
                         Thread.sleep(2);
                     } catch (InterruptedException e) {

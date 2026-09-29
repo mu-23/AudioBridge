@@ -49,6 +49,13 @@ Desktop:
 - discovery/reconnect/tray/volume
 - unified GitHub Releases with Android
 
+## Current task-removal cleanup fix
+
+The Shizuku AudioPolicy cleanup now prefers Android's synchronous
+`unregisterAudioPolicy()` before the UserService is removed. The previous
+async-only cleanup could race with task/process teardown and leave an OEM audio
+route/volume context behind even after network sending had stopped.
+
 ## Immediate known validation target
 
 Before declaring the next stable release:

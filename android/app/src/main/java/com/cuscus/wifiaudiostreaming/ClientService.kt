@@ -175,6 +175,7 @@ class ClientService : Service() {
     }
 
     override fun onDestroy() {
+        StreamingActionReceiver.handleStoppedWithTask(this)
         CoroutineScope(Dispatchers.IO).launch {
             updateWidgetState(this@ClientService, false, false)
         }

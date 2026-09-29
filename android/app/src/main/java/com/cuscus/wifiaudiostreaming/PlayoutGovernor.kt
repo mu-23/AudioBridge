@@ -23,13 +23,13 @@ class PlayoutGovernor(
 ) {
     private val framesPerMs = (sampleRate / 1000.0).coerceAtLeast(1.0)
 
-    private val targetFrames = (targetLatencyMs * framesPerMs).toLong().coerceAtLeast((20 * framesPerMs).toLong())
-    private val highFrames = targetFrames + (targetFrames / 2).coerceAtLeast((60 * framesPerMs).toLong())
-    private val panicFrames = targetFrames + (400 * framesPerMs).toLong()
+    private val targetFrames = (targetLatencyMs * framesPerMs).toLong().coerceAtLeast((15 * framesPerMs).toLong())
+    private val highFrames = targetFrames + (targetFrames / 2).coerceAtLeast((30 * framesPerMs).toLong())
+    private val panicFrames = targetFrames + (180 * framesPerMs).toLong()
 
     // Uno scarto ogni tanto e' impercettibile, una raffica no: la correzione fine la
     // fa il playback rate, il drop interviene solo se l'arretrato resta alto.
-    private val minDropIntervalMs = 250L
+    private val minDropIntervalMs = 80L
 
     private var framesWritten = 0L
     private var lastHeadRaw = 0
@@ -99,7 +99,7 @@ class PlayoutGovernor(
         avgBufferedFrames = avgBufferedFrames * 0.9 + buffered * 0.1
         val errFrames = avgBufferedFrames - targetFrames
         val errRatio = errFrames / targetFrames.toDouble()
-        val factor = (1.0 + errRatio * 0.05).coerceIn(0.995, 1.005)
+        val factor = (1.0 + errRatio * 0.08).coerceIn(0.992, 1.008)
         val newRate = (sampleRate * factor).toInt().coerceAtLeast(1)
         if (kotlin.math.abs(newRate - currentRate) >= 4) {
             runCatching { track.setPlaybackRate(newRate) }

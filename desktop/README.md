@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="https://github.com/mu-23/AudioBridge/blob/main/desktop/src/main/resources/app_icon.png?raw=true" width="128" alt="App Icon" />
+  <img src="https://github.com/mu23XR/AudioBridge/blob/main/desktop/src/main/resources/app_icon.png?raw=true" width="128" alt="App Icon" />
 </p>
 
 <h1 align="center">AudioBridge (Desktop)</h1>
 
 <p align="center">
-  <a href="https://github.com/mu-23/AudioBridge/releases"><img src="https://img.shields.io/badge/Available%20on-GitHub-181717?style=for-the-badge&logo=github" alt="Available on GitHub" /></a>
+  <a href="https://github.com/mu23XR/AudioBridge/releases"><img src="https://img.shields.io/badge/Available%20on-GitHub-181717?style=for-the-badge&logo=github" alt="Available on GitHub" /></a>
   <a href="https://gitlab.com/marcomorosi.dev/WiFiAudioStreaming-Desktop/-/releases"><img src="https://img.shields.io/badge/Available%20on-GitLab-FC6D26?style=for-the-badge&logo=gitlab" alt="Available on GitLab" /></a>
   <a href="https://aur.archlinux.org/packages/wifi-audio-streaming-desktop"><img src="https://img.shields.io/aur/version/wifi-audio-streaming-desktop?color=blue&logo=arch-linux" alt="AUR version" /></a>
 </p>
@@ -16,7 +16,7 @@
 
 Turn your computer into a **wireless audio transmitter or receiver**.
 
-This application allows you to send your PC's audio to any device on the same local network, or listen to audio from another device. It is designed to work seamlessly with the [Android version](https://github.com/mu-23/AudioBridge/tree/main/android).
+This application allows you to send your PC's audio to any device on the same local network, or listen to audio from another device. It is designed to work seamlessly with the [Android version](https://github.com/mu23XR/AudioBridge/tree/main/android).
 
 🌐 **Website**: [marcomorosi.eu/wifi-audio-streaming](https://www.marcomorosi.eu/wifi-audio-streaming/)
 
@@ -29,22 +29,22 @@ This application allows you to send your PC's audio to any device on the same lo
 *Screenshots of the Material You interface. Preview of the upcoming Material You interface.*
 
 <p align="center">
-  <img src="https://github.com/mu-23/AudioBridge/blob/main/desktop/images/server.jpg?raw=true" alt="Server Mode"><br>
+  <img src="https://github.com/mu23XR/AudioBridge/blob/main/desktop/images/server.jpg?raw=true" alt="Server Mode"><br>
   <i>Server Mode</i>
 </p>
 
 <p align="center">
-  <img src="https://github.com/mu-23/AudioBridge/blob/main/desktop/images/client.jpg?raw=true" alt="Client Mode"><br>
+  <img src="https://github.com/mu23XR/AudioBridge/blob/main/desktop/images/client.jpg?raw=true" alt="Client Mode"><br>
   <i>Client Mode</i>
 </p>
 
 <p align="center">
-  <img src="https://github.com/mu-23/AudioBridge/blob/main/desktop/images/streaming.jpg?raw=true" alt="Streaming"><br>
+  <img src="https://github.com/mu23XR/AudioBridge/blob/main/desktop/images/streaming.jpg?raw=true" alt="Streaming"><br>
   <i>Streaming</i>
 </p>
 
 <p align="center">
-  <img src="https://github.com/mu-23/AudioBridge/blob/main/desktop/images/settings.jpg?raw=true" alt="Settings" width="600"><br>
+  <img src="https://github.com/mu23XR/AudioBridge/blob/main/desktop/images/settings.jpg?raw=true" alt="Settings" width="600"><br>
   <i>Settings</i>
 </p>
 
@@ -206,7 +206,7 @@ During first-run setup, the app offers to install `wfas` to your system's PATH a
 
 Turn your smartphone into a **portable audio receiver or transmitter**.
 
-<a href="https://github.com/mu-23/AudioBridge/tree/main/android">
+<a href="https://github.com/mu23XR/AudioBridge/tree/main/android">
 <img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" height="80">
 </a>
 
@@ -231,7 +231,7 @@ It has been tested end to end on real hardware, an ESP32 streaming audio from an
 Requires **JDK 17 or newer**.
 
 ```bash
-git clone https://github.com/mu-23/AudioBridge.git
+git clone https://github.com/mu23XR/AudioBridge.git
 cd AudioBridge/desktop
 ```
 

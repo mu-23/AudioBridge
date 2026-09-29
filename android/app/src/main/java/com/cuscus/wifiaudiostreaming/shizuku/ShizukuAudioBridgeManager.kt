@@ -239,12 +239,14 @@ object ShizukuAudioBridgeManager {
         runCatching { service?.stopBridge() }
         service = null
 
-        if (bound || bindingInProgress) {
-            runCatching {
-                Shizuku.unbindUserService(userServiceArgs(app), serviceConnection, removeUserService)
-            }.onFailure {
-                Log.w(TAG, "could not cancel/remove UserService binding during stop", it)
-            }
+        // remove=true is a server-side removal by UserServiceArgs. It must
+        // not depend on this app process still remembering that it is bound:
+        // after process recreation/crash, bound/service may already be false
+        // while the Shizuku UserService is still alive and still owns AudioPolicy.
+        runCatching {
+            Shizuku.unbindUserService(userServiceArgs(app), serviceConnection, removeUserService)
+        }.onFailure {
+            Log.w(TAG, "could not cancel/remove UserService during stop", it)
         }
         bindingInProgress = false
         bound = false
@@ -253,6 +255,35 @@ object ShizukuAudioBridgeManager {
         NetworkManager.isServerStreaming = false
         NetworkManager.isStreamingCurrent.value = false
         NetworkManager.connectionStatus.value = app.getString(R.string.status_idle)
+        _state.value = State.Idle
+    }
+
+    /**
+     * Host-process death/Service destruction must never leave the privileged
+     * capture daemon behind. A stale UserService keeps its AudioPolicy registered
+     * and can continue diverting system playback even though the app UI is gone.
+     */
+    fun forceRemoveUserService(context: Context) {
+        val app = context.applicationContext
+        desiredRunning = false
+        pendingConfig = null
+        reattachingExisting = false
+        clearDesiredConfig(app)
+        reconnectHandler.removeCallbacks(rebindRunnable)
+
+        runCatching { service?.stopBridge() }
+        service = null
+
+        runCatching {
+            Shizuku.unbindUserService(userServiceArgs(app), serviceConnection, true)
+        }.onFailure {
+            Log.w(TAG, "could not force-remove stale UserService", it)
+        }
+
+        bindingInProgress = false
+        bound = false
+        NetworkManager.isServerStreaming = false
+        NetworkManager.isStreamingCurrent.value = false
         _state.value = State.Idle
     }
 

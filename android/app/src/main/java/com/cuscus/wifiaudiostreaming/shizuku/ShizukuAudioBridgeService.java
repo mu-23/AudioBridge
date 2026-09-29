@@ -67,6 +67,7 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
     private volatile float streamVolume = 1.0f;
     private volatile Object registeredAudioPolicy;
     private volatile Class<?> registeredAudioPolicyClass;
+    private volatile AudioManager registeredAudioManager;
     private volatile String activeCaptureMode = "none";
 
     public ShizukuAudioBridgeService() {
@@ -686,14 +687,14 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
         Object audioPolicy = audioPolicyBuilderClass.getMethod("build").invoke(audioPolicyBuilder);
 
         int result;
+        AudioManager policyAudioManager = policyContext.getSystemService(AudioManager.class);
         if (preferSystemContext) {
             try {
-                Object audioManager = policyContext.getSystemService(AudioManager.class);
                 Method register = AudioManager.class.getMethod(
                         "registerAudioPolicy",
                         audioPolicyClass
                 );
-                result = (Integer) register.invoke(audioManager, audioPolicy);
+                result = (Integer) register.invoke(policyAudioManager, audioPolicy);
             } catch (Throwable instanceFailure) {
                 Log.w(TAG, "instance registerAudioPolicy unavailable; using static", instanceFailure);
                 Method register = AudioManager.class
@@ -727,6 +728,7 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
 
             registeredAudioPolicy = audioPolicy;
             registeredAudioPolicyClass = audioPolicyClass;
+            registeredAudioManager = policyAudioManager;
             return resultRecord;
         } catch (Throwable t) {
             if (resultRecord != null) {
@@ -735,7 +737,7 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
                 } catch (Throwable ignored) {
                 }
             }
-            unregisterPolicy(audioPolicy, audioPolicyClass);
+            unregisterPolicy(policyAudioManager, audioPolicy, audioPolicyClass);
             throw t;
         }
     }
@@ -888,7 +890,8 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
         }
     }
 
-    private synchronized void releaseCapture() {        AudioRecord r = recorder;
+    private synchronized void releaseCapture() {
+        AudioRecord r = recorder;
         recorder = null;
         if (r != null) {
             try {
@@ -903,14 +906,48 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
 
         Object policy = registeredAudioPolicy;
         Class<?> policyClass = registeredAudioPolicyClass;
+        AudioManager audioManager = registeredAudioManager;
         registeredAudioPolicy = null;
         registeredAudioPolicyClass = null;
+        registeredAudioManager = null;
+        activeCaptureMode = "none";
+
         if (policy != null && policyClass != null) {
-            unregisterPolicy(policy, policyClass);
+            unregisterPolicy(audioManager, policy, policyClass);
         }
     }
 
-    private static void unregisterPolicy(Object policy, Class<?> policyClass) {
+    /**
+     * Task removal can destroy the Shizuku UserService immediately after stopBridge().
+     * AudioManager.unregisterAudioPolicyAsyncStatic() is explicitly asynchronous, so
+     * killing the UserService right afterwards can leave an OEM audio route/volume
+     * context behind. Prefer the synchronous unregisterAudioPolicy() call and only
+     * fall back to the asynchronous hidden API on frameworks where the synchronous
+     * method cannot be reflected.
+     */
+    private static void unregisterPolicy(
+            AudioManager audioManager,
+            Object policy,
+            Class<?> policyClass
+    ) {
+        Throwable syncFailure = null;
+
+        if (audioManager != null) {
+            try {
+                Method unregister = AudioManager.class.getDeclaredMethod(
+                        "unregisterAudioPolicy",
+                        policyClass
+                );
+                unregister.setAccessible(true);
+                unregister.invoke(audioManager, policy);
+                Log.i(TAG, "AudioPolicy synchronously unregistered");
+                return;
+            } catch (Throwable t) {
+                syncFailure = t;
+                Log.w(TAG, "synchronous AudioPolicy unregister failed; falling back", t);
+            }
+        }
+
         try {
             Method unregister = AudioManager.class.getDeclaredMethod(
                     "unregisterAudioPolicyAsyncStatic",
@@ -918,8 +955,12 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
             );
             unregister.setAccessible(true);
             unregister.invoke(null, policy);
-        } catch (Throwable t) {
-            Log.w(TAG, "could not unregister AudioPolicy: " + t.getMessage());
+            Log.i(TAG, "AudioPolicy async fallback requested");
+        } catch (Throwable asyncFailure) {
+            if (syncFailure != null) {
+                asyncFailure.addSuppressed(syncFailure);
+            }
+            Log.e(TAG, "could not unregister AudioPolicy", asyncFailure);
         }
     }
 

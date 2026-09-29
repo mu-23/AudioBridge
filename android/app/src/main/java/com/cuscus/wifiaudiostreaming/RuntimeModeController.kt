@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Single owner for AudioBridge's three runtime states:
@@ -25,30 +26,38 @@ import kotlinx.coroutines.launch
  */
 object RuntimeModeController {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val switchingOff = AtomicBoolean(false)
+
+    fun isSwitchingOff(): Boolean = switchingOff.get()
 
     fun selectOff(context: Context) {
         val app = context.applicationContext
-        RoleSelectionGate.initialize(app)
-        RoleSelectionGate.selectOff(app)
+        if (!switchingOff.compareAndSet(false, true)) return
+        try {
+            RoleSelectionGate.initialize(app)
+            RoleSelectionGate.selectOff(app)
 
-        // OFF means stop activity, but keep the remembered receiver target so
-        // RECEIVE can reconnect to the same sender with one tap later.
-        ClientSessionController.pauseKeepTarget(app)
-        ShizukuAudioBridgeManager.stop(app)
-        NetworkManager.stopStreaming(app)
-        NetworkManager.stopListeningForDevices()
+            // OFF means stop activity, but keep the remembered receiver target so
+            // RECEIVE can reconnect to the same sender with one tap later.
+            ClientSessionController.pauseKeepTarget(app)
+            ShizukuAudioBridgeManager.stop(app)
+            NetworkManager.stopStreaming(app)
+            NetworkManager.stopListeningForDevices()
 
-        app.stopService(Intent(app, AudioCaptureService::class.java))
-        app.stopService(Intent(app, ClientService::class.java))
-        app.stopService(Intent(app, AutoConnectService::class.java))
-        app.stopService(Intent(app, SnapcastClientService::class.java))
-        app.stopService(Intent(app, RtpClientService::class.java))
+            app.stopService(Intent(app, AudioCaptureService::class.java))
+            app.stopService(Intent(app, ClientService::class.java))
+            app.stopService(Intent(app, AutoConnectService::class.java))
+            app.stopService(Intent(app, SnapcastClientService::class.java))
+            app.stopService(Intent(app, RtpClientService::class.java))
 
-        VolumeOverlayController.dismiss()
-        NotificationCenter.cancel(app, NotificationCenter.ID_SERVER)
-        NotificationCenter.cancel(app, NotificationCenter.ID_CLIENT)
-        NotificationCenter.cancel(app, NotificationCenter.ID_AUTO_CONNECT)
-        NotificationCenter.postModeControl(app)
+            VolumeOverlayController.dismiss()
+            NotificationCenter.cancel(app, NotificationCenter.ID_SERVER)
+            NotificationCenter.cancel(app, NotificationCenter.ID_CLIENT)
+            NotificationCenter.cancel(app, NotificationCenter.ID_AUTO_CONNECT)
+            NotificationCenter.postModeControl(app)
+        } finally {
+            switchingOff.set(false)
+        }
     }
 
     fun selectReceiver(context: Context) {

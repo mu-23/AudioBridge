@@ -198,7 +198,7 @@ They should not be treated as a dedicated secure transport for hostile networks,
 
 Protocol details:
 
-[`WFAS_PROTOCOL.md`](WFAS_PROTOCOL.md)
+[`WFAS_PROTOCOL.md`](../WFAS_PROTOCOL.md)
 
 ---
 

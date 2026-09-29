@@ -148,33 +148,39 @@
         <service
             android:name=".ClientService"
             android:foregroundServiceType="mediaPlayback"
-            android:exported="false"/>
+            android:exported="false"
+            android:stopWithTask="true"/>
 
         <!-- Lab foreground host; privileged capture itself runs in Shizuku UserService. -->
         <service
             android:name=".shizuku.ShizukuBridgeHostService"
             android:foregroundServiceType="mediaPlayback"
-            android:exported="false" />
+            android:exported="false"
+            android:stopWithTask="true" />
 
         <service
             android:name=".RtpClientService"
             android:foregroundServiceType="mediaPlayback"
-            android:exported="false"/>
+            android:exported="false"
+            android:stopWithTask="true"/>
 
         <service
             android:name=".SnapcastClientService"
             android:foregroundServiceType="mediaPlayback"
-            android:exported="false"/>
+            android:exported="false"
+            android:stopWithTask="true"/>
 
         <service
             android:name=".AudioCaptureService"
             android:foregroundServiceType="mediaProjection|microphone"
-            android:exported="false" />
+            android:exported="false"
+            android:stopWithTask="true" />
 
         <service
             android:name=".AutoConnectService"
             android:foregroundServiceType="dataSync"
-            android:exported="false" />
+            android:exported="false"
+            android:stopWithTask="true" />
 
         <service
             android:name=".ServerTileService"

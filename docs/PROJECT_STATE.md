@@ -64,3 +64,23 @@ Before declaring the next stable release:
 - verify receiver background behavior
 - verify permanent package + permanent signer install path
 - verify Android/Desktop update links point to `mu23XR/AudioBridge`
+
+
+## Task-removal ownership rule
+
+Runtime foreground services must keep `android:stopWithTask="false"` so Android delivers
+`Service.onTaskRemoved()`. The app then performs one explicit OFF transition before
+stopping services. Setting `stopWithTask="true"` bypasses that callback and can leave
+the Shizuku UserService alive.
+
+The Shizuku bridge also receives an app-process Binder token. If the normal app process
+is killed unexpectedly, Binder death forces the privileged UserService to release
+AudioPolicy and exit.
+
+## Silence and latency policy
+
+- Shizuku silence is not a disconnect condition.
+- During capture silence, the sender emits a header-only liveness packet once per second.
+- Receiver liveness is independent of PCM availability.
+- New Android installs default to 20 ms WFAS target latency.
+- Receiver startup preroll is 10 ms; excessive AudioTrack backlog is corrected aggressively.

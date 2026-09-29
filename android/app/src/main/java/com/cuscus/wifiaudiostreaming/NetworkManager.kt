@@ -2588,6 +2588,14 @@ object NetworkManager {
                             val seq       = ((data[4].toInt() and 0xFF) shl 8) or (data[5].toInt() and 0xFF)
                             val isSilence = (flags and 0x01) != 0
 
+                            // Header-only silence packets are sender keepalives.
+                            // They prove liveness without manufacturing PCM or increasing
+                            // the AudioTrack queue while the source device is silent.
+                            if (isSilence && data.size <= HEADER_SIZE) {
+                                expectedSeq = (seq + 1) and 0xFFFF
+                                return
+                            }
+
                             LinkMetrics.onPacket(
                                 seq,
                                 ((data[6].toLong() and 0xFF) shl 24) or

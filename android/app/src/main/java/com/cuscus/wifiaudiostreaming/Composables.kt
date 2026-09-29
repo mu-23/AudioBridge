@@ -879,7 +879,7 @@ fun SettingsScreenContent(
                         description = stringResource(R.string.settings_item_latency_desc),
                         icon = Icons.Outlined.Timer,
                         value = appSettings.latencyMs.toFloat(),
-                        range = 40f..400f,
+                        range = 20f..400f,
                         steps = ((400f - 40f) / 20f).toInt() - 1,
                         valueSuffix = "ms",
                         onValueChange = { onAdvancedAudioChange(it.toInt(), appSettings.maxPayloadBytes) }

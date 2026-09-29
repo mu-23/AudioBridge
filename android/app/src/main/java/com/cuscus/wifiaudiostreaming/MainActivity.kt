@@ -658,14 +658,14 @@ class MainActivity : AppCompatActivity() {
                 onUpdate = {
                     val intent = Intent(
                         Intent.ACTION_VIEW,
-                        Uri.parse("https://github.com/mu-23/AudioBridge/releases")
+                        Uri.parse("https://github.com/mu23XR/AudioBridge/releases")
                     )
                     runCatching { context.startActivity(intent) }
                     viewModel.clearProtocolMismatch()
                 },
                 onGithub = {
                     val updateUrl = if (mismatch.localVersion < mismatch.remoteVersion)
-                        "https://github.com/mu-23/AudioBridge/releases"
+                        "https://github.com/mu23XR/AudioBridge/releases"
                     else
                         "https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop/releases"
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl))
@@ -683,7 +683,7 @@ class MainActivity : AppCompatActivity() {
                 onUpdate = {
                     val intent = Intent(
                         Intent.ACTION_VIEW,
-                        Uri.parse("https://github.com/mu-23/AudioBridge/releases")
+                        Uri.parse("https://github.com/mu23XR/AudioBridge/releases")
                     )
                     runCatching { context.startActivity(intent) }
                     viewModel.clearUnresponsiveServer()

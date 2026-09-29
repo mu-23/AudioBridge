@@ -283,6 +283,7 @@ class AudioCaptureService : Service() {
     }
 
     override fun onDestroy() {
+        StreamingActionReceiver.handleStoppedWithTask(this)
         stopCapture()
         serviceScope.cancel()
         super.onDestroy()

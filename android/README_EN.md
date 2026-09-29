@@ -63,7 +63,7 @@ Current maintenance areas include:
 - Network-change recovery
 - Optional authentication and encryption
 
-For new installations, the default WFAS Wi-Fi latency setting is currently **40 ms**. Lower-latency adaptive buffering is still under active development.
+For new installations, the default WFAS Wi-Fi latency setting is currently **20 ms**. Lower-latency adaptive buffering is still under active development.
 
 ### Multiple Output Protocols
 

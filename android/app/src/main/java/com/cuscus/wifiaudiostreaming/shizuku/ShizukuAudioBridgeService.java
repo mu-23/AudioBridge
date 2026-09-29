@@ -20,6 +20,8 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Build;
+import android.os.IBinder;
+import android.os.RemoteException;
 import android.os.Process;
 import android.util.Log;
 
@@ -69,6 +71,8 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
     private volatile Class<?> registeredAudioPolicyClass;
     private volatile AudioManager registeredAudioManager;
     private volatile String activeCaptureMode = "none";
+    private volatile IBinder ownerToken;
+    private volatile IBinder.DeathRecipient ownerDeathRecipient;
 
     public ShizukuAudioBridgeService() {
         this.context = null;
@@ -88,7 +92,8 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
             int channels,
             int packetBytes,
             boolean keepPlayingOnDevice,
-            boolean persistAfterClient
+            boolean persistAfterClient,
+            IBinder ownerToken
     ) {
         stopBridgeInternal();
 
@@ -107,6 +112,14 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
         }
         if (sampleRate < 8000 || sampleRate > 192000) {
             status = "error: invalid sample rate " + sampleRate;
+            return status;
+        }
+
+        try {
+            attachOwner(ownerToken);
+        } catch (Throwable t) {
+            status = "error: owner process unavailable: " + String.valueOf(t.getMessage());
+            Log.e(TAG, "could not attach owner process token", t);
             return status;
         }
 
@@ -161,6 +174,7 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
 
         } catch (Throwable t) {
             releaseCapture();
+            detachOwner();
             status = "error: build=" + BuildConfig.VERSION_CODE + " " + t.getClass().getSimpleName() + ": " + String.valueOf(t.getMessage());
             Log.e(TAG, "capture start failed", t);
             return status;
@@ -240,7 +254,43 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
         }
 
         releaseCapture();
+        detachOwner();
         status = "idle";
+    }
+
+    private synchronized void attachOwner(IBinder token) throws RemoteException {
+        detachOwner();
+        if (token == null) {
+            throw new IllegalArgumentException("ownerToken is null");
+        }
+
+        IBinder.DeathRecipient recipient = () -> {
+            Log.w(TAG, "owner app process died; stopping Shizuku bridge");
+            Thread cleanup = new Thread(() -> {
+                stopBridgeInternal();
+                Log.w(TAG, "owner-death cleanup complete; exiting UserService");
+                System.exit(0);
+            }, "wfas-owner-death-cleanup");
+            cleanup.setDaemon(false);
+            cleanup.start();
+        };
+
+        token.linkToDeath(recipient, 0);
+        ownerToken = token;
+        ownerDeathRecipient = recipient;
+    }
+
+    private synchronized void detachOwner() {
+        IBinder token = ownerToken;
+        IBinder.DeathRecipient recipient = ownerDeathRecipient;
+        ownerToken = null;
+        ownerDeathRecipient = null;
+        if (token != null && recipient != null) {
+            try {
+                token.unlinkToDeath(recipient, 0);
+            } catch (Throwable ignored) {
+            }
+        }
     }
 
     private void runServer(

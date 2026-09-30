@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Marco Morosi
+ * Copyright AudioBridge
  *
  * Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
  * the European Commission - subsequent versions of the EUPL (the "Licence");
@@ -142,7 +142,7 @@ object ProtocolRegistrar {
             """
             [Desktop Entry]
             Type=Application
-            Name=WiFi Audio Streaming
+            Name=AudioBridge
             Exec="$exe" %u
             Terminal=false
             NoDisplay=true

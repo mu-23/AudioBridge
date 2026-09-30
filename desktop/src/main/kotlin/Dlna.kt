@@ -113,7 +113,7 @@ data class DlnaServerConfig(
     val port: Int = 8081,
     val preference: DlnaFormatPreference = DlnaFormatPreference.AUTO,
     val selectedUdns: Set<String> = emptySet(),
-    val title: String = "WiFi Audio Streaming"
+    val title: String = "AudioBridge"
 )
 
 object DlnaSelection {
@@ -360,7 +360,7 @@ object DlnaDiagnostics {
 
     fun report(): String {
         val head = buildString {
-            appendLine("WiFi Audio Streaming - DLNA diagnostics")
+            appendLine("AudioBridge - DLNA diagnostics")
             appendLine("generated: ${java.time.LocalDateTime.now().withNano(0)}")
             appendLine("os: ${System.getProperty("os.name")} ${System.getProperty("os.version")} (${System.getProperty("os.arch")})")
             appendLine("java: ${System.getProperty("java.version")}")
@@ -602,7 +602,7 @@ object DlnaSsdp {
                     append("MX: 2\r\n")
                     append("ST: $target\r\n")
                     append("USER-AGENT: ${DlnaConst.USER_AGENT}\r\n")
-                    append("CPFN.UPNP.ORG: WiFi Audio Streaming\r\n")
+                    append("CPFN.UPNP.ORG: AudioBridge\r\n")
                     append("\r\n")
                 }.toByteArray(Charsets.US_ASCII)
                 repeat(2) {
@@ -740,8 +740,8 @@ object DlnaDidl {
             append("xmlns:dlna=\"urn:schemas-dlna-org:metadata-1-0/\">")
             append("<item id=\"").append(DlnaConst.DIDL_ITEM_ID).append("\" parentID=\"0\" restricted=\"1\">")
             append("<dc:title>").append(DlnaXml.escape(title)).append("</dc:title>")
-            append("<dc:creator>WiFi Audio Streaming</dc:creator>")
-            append("<upnp:artist>WiFi Audio Streaming</upnp:artist>")
+            append("<dc:creator>AudioBridge</dc:creator>")
+            append("<upnp:artist>AudioBridge</upnp:artist>")
             append("<upnp:class>").append(quirks.didlUpnpClass).append("</upnp:class>")
             append("<res protocolInfo=\"").append(DlnaXml.escape(protocolInfo)).append("\">")
             append(DlnaXml.escape(url))

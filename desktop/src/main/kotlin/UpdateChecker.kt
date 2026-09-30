@@ -20,12 +20,9 @@ import java.net.URL
 
 object DownloadLinks {
     const val GITHUB_RELEASES = "https://github.com/mu23XR/AudioBridge/releases"
-    private const val SITE_EN = "https://www.marcomorosi.eu/wifi-audio-streaming/download/"
-    private const val SITE_IT = "https://www.marcomorosi.eu/it/wifi-audio-streaming/download/"
-
-    fun site(): String =
-        if (java.util.Locale.getDefault().language.equals("it", ignoreCase = true)) SITE_IT else SITE_EN
+    fun site(): String = GITHUB_RELEASES
 }
+
 
 object UpdateChecker {
 

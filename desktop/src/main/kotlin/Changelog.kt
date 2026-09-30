@@ -175,8 +175,8 @@ object Changelog {
                     icon = Icons.Outlined.PhoneAndroid,
                     title = Bilingual("Update the Android app too", "Aggiorna anche l'app Android"),
                     body = Bilingual(
-                        "WiFi Audio Streaming for Android has been updated as well. Update it too so both ends stay compatible.",
-                        "Anche WiFi Audio Streaming per Android è stata aggiornata. Aggiornala anche tu, così i due lati restano compatibili."
+                        "AudioBridge for Android has been updated as well. Update it too so both ends stay compatible.",
+                        "Anche AudioBridge per Android è stata aggiornata. Aggiornala anche tu, così i due lati restano compatibili."
                     ),
                     linkLabel = Bilingual("Open on GitHub", "Apri su GitHub"),
                     linkUrl = ANDROID_RELEASES_URL
@@ -251,8 +251,8 @@ object Changelog {
                     icon = Icons.Outlined.PhoneAndroid,
                     title = Bilingual("Update the Android app too", "Aggiorna anche l'app Android"),
                     body = Bilingual(
-                        "WiFi Audio Streaming for Android has been updated as well. Update it too so both ends stay compatible.",
-                        "Anche WiFi Audio Streaming per Android è stata aggiornata. Aggiornala anche tu, così i due lati restano compatibili."
+                        "AudioBridge for Android has been updated as well. Update it too so both ends stay compatible.",
+                        "Anche AudioBridge per Android è stata aggiornata. Aggiornala anche tu, così i due lati restano compatibili."
                     ),
                     linkLabel = Bilingual("Open on GitHub", "Apri su GitHub"),
                     linkUrl = ANDROID_RELEASES_URL

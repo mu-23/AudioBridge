@@ -40,6 +40,13 @@ Test builds are prerelease/development artifacts and must be clearly labeled. Th
 
 Where a signed test APK is intended to upgrade into a future stable build, it must use the permanent signing identity.
 
+Tags matching `vMAJOR.MINOR.PATCH-test.N` trigger the reusable `android-test.yml`
+workflow. Android signing/build, Windows checks/package and governance must all
+pass before the tag is published as a GitHub prerelease (`latest=false`). Provide
+release notes in `docs/releases/MAJOR.MINOR.PATCH-test.N.md` before tagging.
+Assets include SHA-256 checksums and the exact Android source commit. Manual
+workflow dispatch remains available for artifact-only test builds.
+
 ## Rollback
 
 Do not delete previous stable Releases merely because a new release is bad. Publish a corrected higher version instead, or clearly mark the affected release as withdrawn.

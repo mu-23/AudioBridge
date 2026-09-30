@@ -12,6 +12,7 @@ import com.cuscus.wifiaudiostreaming.scripting.ScriptExecutor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -28,11 +29,20 @@ import java.util.concurrent.atomic.AtomicBoolean
 object RuntimeModeController {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val switchingOff = AtomicBoolean(false)
+    private var modeGeneration = 0L
+    private var pendingModeJob: Job? = null
+
+    private fun beginModeCommand(): Long {
+        pendingModeJob?.cancel()
+        pendingModeJob = null
+        return ++modeGeneration
+    }
 
     fun isSwitchingOff(): Boolean = switchingOff.get()
 
     fun selectOff(context: Context, keepControlNotification: Boolean = true) {
         val app = context.applicationContext
+        beginModeCommand()
         if (!switchingOff.compareAndSet(false, true)) return
         try {
             RoleSelectionGate.initialize(app)
@@ -67,6 +77,7 @@ object RuntimeModeController {
 
     fun selectReceiver(context: Context) {
         val app = context.applicationContext
+        val generation = beginModeCommand()
         RoleSelectionGate.initialize(app)
         StreamingActionReceiver.clearTaskRemovedStop(app)
 
@@ -83,8 +94,9 @@ object RuntimeModeController {
         ClientSessionController.enterReceiverMode(app)
         NotificationCenter.postModeControl(app)
 
-        scope.launch {
+        pendingModeJob = scope.launch {
             val settings = SettingsDataStore(app).settingsFlow.first()
+            if (generation != modeGeneration || !RoleSelectionGate.isReceiverSelected()) return@launch
             if (settings.autoConnectEnabled) {
                 val intent = Intent(app, AutoConnectService::class.java)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -103,6 +115,7 @@ object RuntimeModeController {
      */
     fun restartReceiver(context: Context) {
         val app = context.applicationContext
+        val generation = beginModeCommand()
         RoleSelectionGate.initialize(app)
         StreamingActionReceiver.clearTaskRemovedStop(app)
 
@@ -117,8 +130,9 @@ object RuntimeModeController {
         ClientSessionController.restartCurrent(app)
         NotificationCenter.postModeControl(app)
 
-        scope.launch {
+        pendingModeJob = scope.launch {
             val settings = SettingsDataStore(app).settingsFlow.first()
+            if (generation != modeGeneration || !RoleSelectionGate.isReceiverSelected()) return@launch
             if (settings.autoConnectEnabled) {
                 val intent = Intent(app, AutoConnectService::class.java)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -136,6 +150,7 @@ object RuntimeModeController {
      */
     fun selectSenderIdle(context: Context) {
         val app = context.applicationContext
+        beginModeCommand()
         RoleSelectionGate.initialize(app)
         StreamingActionReceiver.clearTaskRemovedStop(app)
 
@@ -169,7 +184,8 @@ object RuntimeModeController {
             return
         }
 
-        scope.launch { startConfiguredSender(app) }
+        val generation = modeGeneration
+        pendingModeJob = scope.launch { startConfiguredSender(app, generation) }
     }
 
     /**
@@ -181,7 +197,8 @@ object RuntimeModeController {
         val app = context.applicationContext
         selectSenderIdle(app)
 
-        scope.launch {
+        val generation = modeGeneration
+        pendingModeJob = scope.launch {
             ShizukuAudioBridgeManager.stop(app)
             NetworkManager.stopStreaming(app)
             app.stopService(Intent(app, AudioCaptureService::class.java))
@@ -190,14 +207,15 @@ object RuntimeModeController {
             // UserService removal is asynchronous on some ROMs. Give the old
             // privileged bridge a short window to disappear before rebinding.
             delay(250L)
-            if (!RoleSelectionGate.isSenderSelected()) return@launch
+            if (generation != modeGeneration || !RoleSelectionGate.isSenderSelected()) return@launch
 
-            startConfiguredSender(app)
+            startConfiguredSender(app, generation)
         }
     }
 
-    private suspend fun startConfiguredSender(app: Context) {
+    private suspend fun startConfiguredSender(app: Context, generation: Long) {
         val settings = SettingsDataStore(app).settingsFlow.first()
+        if (generation != modeGeneration || !RoleSelectionGate.isSenderSelected()) return
 
         if (settings.streamInternal &&
             InternalAudioBackend.normalize(settings.internalAudioBackend) == InternalAudioBackend.SHIZUKU

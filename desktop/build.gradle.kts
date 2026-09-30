@@ -414,6 +414,18 @@ tasks.named("check") {
     dependsOn(checkHelpCoverage)
 }
 
+val checkProtocols by tasks.registering(JavaExec::class) {
+    group = "verification"
+    description = "Run the RTP, WFAS, DLNA and Snapcast protocol regression checks"
+    dependsOn("testClasses")
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("DlnaProtocolCheckKt")
+}
+
+tasks.named("check") {
+    dependsOn(checkProtocols)
+}
+
 tasks.register<Copy>("installManPage") {
     description = "Install wfas.1 man page to /usr/local/share/man/man1/"
     group       = "install"

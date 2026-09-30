@@ -8,6 +8,7 @@
 package com.cuscus.wifiaudiostreaming.shizuku;
 
 import com.cuscus.wifiaudiostreaming.BuildConfig;
+import com.cuscus.wifiaudiostreaming.PcmSilence;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -23,6 +24,7 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.os.Process;
+import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.Keep;
@@ -73,6 +75,10 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
     private volatile String activeCaptureMode = "none";
     private volatile IBinder ownerToken;
     private volatile IBinder.DeathRecipient ownerDeathRecipient;
+    private AudioManager captureVolumeManager;
+    private boolean originalMediaMuted;
+    private int originalMediaVolume;
+    private boolean captureMuteChanged;
 
     public ShizukuAudioBridgeService() {
         this.context = null;
@@ -167,10 +173,18 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
             if (recorder == null || recorder.getState() != AudioRecord.STATE_INITIALIZED) {
                 throw new IllegalStateException("AudioRecord is not initialized");
             }
+            if (captureMode.startsWith("REMOTE_SUBMIX")) {
+                Context shellContext = createSystemShellAudioContext(context);
+                captureVolumeManager = AudioManager.class.getConstructor(Context.class)
+                        .newInstance(shellContext);
+                originalMediaMuted = captureVolumeManager.isStreamMute(AudioManager.STREAM_MUSIC);
+                originalMediaVolume = captureVolumeManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+            }
             recorder.startRecording();
             if (recorder.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
                 throw new IllegalStateException("AudioRecord did not enter RECORDSTATE_RECORDING");
             }
+            synchronizeCaptureVolume();
 
         } catch (Throwable t) {
             releaseCapture();
@@ -487,7 +501,13 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
                 if (read < 0) {
                     throw new IllegalStateException("AudioRecord.read failed: " + read);
                 }
-                if (read == 0) {
+                int alignedRead = read - (read % frameSize);
+                applyPcmGainInPlace(readBuffer, alignedRead, streamVolume);
+                if (alignedRead == 0 || PcmSilence.isZero(readBuffer, 0, alignedRead)) {
+                    // AudioRecord may return full buffers of zero PCM indefinitely.
+                    // Sending those to a media AudioTrack triggers OEM zero-audio
+                    // suspension. Keep the session alive without playing fake PCM.
+                    samplePosition += alignedRead / frameSize;
                     long now = System.currentTimeMillis();
                     if (now - lastSilenceKeepaliveAt >= 1_000L) {
                         byte[] keepalive = new byte[HEADER_SIZE];
@@ -520,10 +540,6 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
                     }
                     continue;
                 }
-
-                int alignedRead = read - (read % frameSize);
-
-                applyPcmGainInPlace(readBuffer, alignedRead, streamVolume);
 
                 int offset = 0;
                 while (offset < alignedRead && running.get() && sessionAlive.get()) {
@@ -965,6 +981,58 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
         }
     }
 
+    private static int mediaOutputDevices() throws Exception {
+        Class<?> audioSystem = Class.forName("android.media.AudioSystem");
+        return (Integer) audioSystem.getMethod("getDevicesForStream", int.class)
+                .invoke(null, AudioManager.STREAM_MUSIC);
+    }
+
+    private void synchronizeCaptureVolume() throws Exception {
+        AudioManager manager = captureVolumeManager;
+        if (manager == null) return; // LOOP_BACK_RENDER retains the local route.
+        long deadline = SystemClock.elapsedRealtime() + 1000L;
+        while (mediaOutputDevices() != 0x8000) {
+            if (SystemClock.elapsedRealtime() >= deadline) {
+                throw new IllegalStateException("REMOTE_SUBMIX media route did not become active");
+            }
+            Thread.sleep(20L);
+        }
+        // Never change the local speaker's index to repair a capture-route mute.
+        captureMuteChanged = manager.isStreamMute(AudioManager.STREAM_MUSIC);
+        manager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, 0);
+        if (mediaOutputDevices() != 0x8000) {
+            throw new IllegalStateException("Media route changed during capture volume setup");
+        }
+        if (manager.getStreamVolume(AudioManager.STREAM_MUSIC) == 0) {
+            manager.setStreamVolume(AudioManager.STREAM_MUSIC,
+                    manager.getStreamMaxVolume(AudioManager.STREAM_MUSIC), 0);
+        }
+        Log.i(TAG, "capture route volume synchronized; originalMediaVolume=" +
+                originalMediaVolume + " originalMuted=" + originalMediaMuted);
+    }
+
+    private void restoreLocalMute() {
+        AudioManager manager = captureVolumeManager;
+        captureVolumeManager = null;
+        if (manager == null || !captureMuteChanged || !originalMediaMuted) return;
+        captureMuteChanged = false;
+        try {
+            long deadline = SystemClock.elapsedRealtime() + 1000L;
+            while ((mediaOutputDevices() & 0x8000) != 0) {
+                if (SystemClock.elapsedRealtime() >= deadline) {
+                    throw new IllegalStateException("Capture route still active after release");
+                }
+                Thread.sleep(20L);
+            }
+            // Do not overwrite a volume the user changed during the session.
+            if (manager.getStreamVolume(AudioManager.STREAM_MUSIC) == originalMediaVolume) {
+                manager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, 0);
+            }
+        } catch (Exception failure) {
+            Log.e(TAG, "Could not restore local media mute after capture release", failure);
+        }
+    }
+
     private synchronized void releaseCapture() {
         AudioRecord r = recorder;
         recorder = null;
@@ -990,6 +1058,7 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
         if (policy != null && policyClass != null) {
             unregisterPolicy(audioManager, policy, policyClass);
         }
+        restoreLocalMute();
     }
 
     /**

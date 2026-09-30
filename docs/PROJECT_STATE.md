@@ -85,6 +85,18 @@ AudioPolicy and exit.
 - New Android installs default to 20 ms WFAS target latency.
 - Receiver startup preroll is 10 ms; excessive AudioTrack backlog is corrected aggressively.
 
+## Next validation build: test.15
+
+The latest development cleanup and notification commands are retained. Runtime
+fixes in test.15 address inherited SEND mute (#10), actual zero PCM silence (#4),
+nonblocking receiver writes/stalled playback and obsolete transport/mode-command
+cleanup (#9). These are implementations awaiting real-device acceptance, not
+closed bugs. Existing Recents/owner-death cleanup remains intact.
+
+Test prerelease tags now build signed Android and Windows assets through the
+reusable test workflow; Android, Desktop and governance jobs gate publication.
+See docs/releases/1.3.1-test.15.md and docs/handoffs/2026-10-01-test15-implementation.md.
+
 
 ## Active issue tracker
 

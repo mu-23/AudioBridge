@@ -480,10 +480,6 @@ object NetworkManager {
 
     fun clearProtocolMismatch() { protocolMismatch.value = null }
 
-    val unresponsiveServer = MutableStateFlow<String?>(null)
-
-    fun clearUnresponsiveServer() { unresponsiveServer.value = null }
-
     val connectionStatus = MutableStateFlow("")
     val discoveredDevices = MutableStateFlow<Map<String, ServerInfo>>(emptyMap())
     val isStreamingCurrent = MutableStateFlow(false)
@@ -2405,8 +2401,6 @@ object NetworkManager {
                             ) {
                                 Log.w(TAG, "[CLIENT] nessuna risposta dopo ${SILENT_PEER_TIMEOUT_MS}ms, rinuncio")
                                 connectionStatus.value = context.getString(R.string.status_server_silent_maybe_outdated)
-                                unresponsiveServer.value =
-                                    serverInfo.hostname.ifBlank { serverInfo.ip }
                                 isStreamingCurrent.value = false
                                 withContext(Dispatchers.Main) { onServerDisconnected?.invoke() }
                                 return@launch

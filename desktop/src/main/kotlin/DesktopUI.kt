@@ -841,7 +841,7 @@ fun WelcomeScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Button(
-                                onClick = { openUrl("https://www.marcomorosi.eu/wifi-audio-streaming/download/") },
+                                onClick = { openUrl("https://github.com/mu23XR/AudioBridge/releases") },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(Icons.Outlined.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -1734,47 +1734,15 @@ fun SettingsScreen(
 
                                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                                        InfoSetting(
-                                            title = stringResource("developed_by"),
-                                            description = "Marco Morosi",
-                                            icon = Icons.Outlined.Person
-                                        )
-                                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                                        ClickableSetting(
-                                            title = stringResource("support_kofi_title"),
-                                            description = stringResource("support_kofi_desc"),
-                                            icon = Icons.Outlined.LocalCafe,
-                                            onClick = {
-                                                openUrl("https://ko-fi.com/marcomorosi")
-                                            }
-                                        )
-                                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                                         ClickableSetting(
                                             title = stringResource("source_code_android"),
                                             description = stringResource("source_code_github_short"),
                                             icon = Icons.Outlined.Code,
                                             onClick = {
-                                                openUrl("https://github.com/marcomorosi06/WiFiAudioStreaming-Android/")
+                                                openUrl("https://github.com/mu23XR/AudioBridge")
                                             }
                                         )
-                                        ClickableSetting(
-                                            title = stringResource("source_code_desktop"),
-                                            description = stringResource("source_code_github_short"),
-                                            icon = Icons.Outlined.Code,
-                                            onClick = {
-                                                openUrl("https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop")
-                                            }
-                                        )
-                                        ClickableSetting(
-                                            title = stringResource("source_code_protocol"),
-                                            description = stringResource("source_code_protocol_desc"),
-                                            icon = Icons.Outlined.Code,
-                                            onClick = {
-                                                openUrl("https://github.com/marcomorosi06/wfas-protocol")
-                                            }
-                                        )
-
-
+                                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                                         SwitchSetting(
                                             title = stringResource("developer_title"),
                                             description = stringResource("developer_desc"),

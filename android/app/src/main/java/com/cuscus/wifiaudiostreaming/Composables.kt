@@ -511,7 +511,6 @@ fun ExpressiveSettingsScreen(
     onHapticsChange: (Boolean) -> Unit = {},
     onBackgroundSpectrumChange: (Boolean, String, Boolean, Int) -> Unit = { _, _, _, _ -> },
     onBlackoutOutlinedChange: (Boolean) -> Unit = {},
-    onShowDonation: () -> Unit = {},
     onDeveloperModeChange: (Boolean) -> Unit = {},
     onNoiseReductionChange: (Boolean, Int) -> Unit = { _, _ -> },
     onOpenScripting: () -> Unit = {},
@@ -565,7 +564,6 @@ fun ExpressiveSettingsScreen(
             onHapticsChange = onHapticsChange,
             onBackgroundSpectrumChange = onBackgroundSpectrumChange,
             onBlackoutOutlinedChange = onBlackoutOutlinedChange,
-            onShowDonation = onShowDonation,
             onDeveloperModeChange = onDeveloperModeChange,
             onNoiseReductionChange = onNoiseReductionChange,
             onOpenScripting = onOpenScripting,
@@ -613,7 +611,6 @@ fun SettingsScreenContent(
     onHapticsChange: (Boolean) -> Unit = {},
     onBackgroundSpectrumChange: (Boolean, String, Boolean, Int) -> Unit = { _, _, _, _ -> },
     onBlackoutOutlinedChange: (Boolean) -> Unit = {},
-    onShowDonation: () -> Unit = {},
     onDeveloperModeChange: (Boolean) -> Unit = {},
     onNoiseReductionChange: (Boolean, Int) -> Unit = { _, _ -> },
     onOpenScripting: () -> Unit = {},
@@ -1447,56 +1444,19 @@ fun SettingsScreenContent(
                         icon = Icons.Outlined.HelpOutline,
                         onClick = onShowOnboarding
                     )
-                    SettingsInfoItem(
-                        title = stringResource(R.string.developer_name),
-                        description = "Marco Morosi",
-                        icon = Icons.Outlined.Person
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    SettingsClickableItem(
-                        title = stringResource(R.string.support_kofi_title),
-                        description = stringResource(R.string.support_kofi_desc),
-                        icon = Icons.Outlined.LocalCafe,
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://ko-fi.com/marcomorosi"))
-                            context.startActivity(intent)
-                        }
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    SettingsClickableItem(
-                        title = stringResource(R.string.settings_item_show_donation_title),
-                        description = stringResource(R.string.settings_item_show_donation_desc),
-                        icon = Icons.Outlined.Redeem,
-                        onClick = onShowDonation
-                    )
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     SettingsClickableItem(
                         title = stringResource(R.string.source_code_android),
                         description = stringResource(R.string.source_code_view_on_github),
                         icon = Icons.Outlined.Code,
                         onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/mu23XR/AudioBridge/"))
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://github.com/mu23XR/AudioBridge/")
+                            )
                             context.startActivity(intent)
                         }
                     )
-                    SettingsClickableItem(
-                        title = stringResource(R.string.source_code_desktop),
-                        description = stringResource(R.string.source_code_view_on_github),
-                        icon = Icons.Outlined.Code,
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop"))
-                            context.startActivity(intent)
-                        }
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    SettingsClickableItem(
-                        title = stringResource(R.string.source_code_protocol),
-                        description = stringResource(R.string.source_code_protocol_desc),
-                        icon = Icons.Outlined.Code,
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/marcomorosi06/wfas-protocol"))
-                            context.startActivity(intent)
-                        }
                     )
                 }
             }

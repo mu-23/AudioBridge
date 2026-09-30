@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Marco Morosi
+ * Copyright AudioBridge
  *
  * Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
  * the European Commission - subsequent versions of the EUPL (the "Licence");
@@ -17,7 +17,7 @@
  * --------------------------------------------------------------------------
  * audio_engine.c
  *
- * Native audio capture engine for WiFi Audio Streaming Desktop.
+ * Native audio capture engine for AudioBridge Desktop.
  * Implements audio loopback (capturing what is being played) via:
  * - Windows : WASAPI Loopback (no virtual driver required)
  * - Linux   : PulseAudio/PipeWire simple API (default sink monitor)
@@ -1337,7 +1337,7 @@ static int pulse_open_stream(void) {
 
     int error = 0;
     void *s = fn_pa_simple_new(
-        NULL, "WiFi Audio Streaming", PA_STREAM_RECORD,
+        NULL, "AudioBridge", PA_STREAM_RECORD,
         g_monitor_name[0] ? g_monitor_name : NULL, "Loopback Capture",
         &ss, NULL, &attr, &error);
 

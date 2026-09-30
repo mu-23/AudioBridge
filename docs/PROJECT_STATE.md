@@ -99,3 +99,8 @@ Blocking bugs:
 - #5 WFAS playback latency can become unexpectedly large
 
 Do not treat a code change or green CI as proof that these are fixed. Follow each Issue's real-device acceptance criteria before closing it.
+
+
+## Repository governance tracker
+
+Open Issue #7 tracks remaining repository-governance work, including main-branch protection, stale branch cleanup, release hardening and removal of temporary test workflows. Do not describe repository governance as complete until that tracker is closed.

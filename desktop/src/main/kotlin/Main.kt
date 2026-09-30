@@ -1904,7 +1904,7 @@ object NetworkHandler_v1 {
             append("</div>")
 
             append("<div class=\"kofi\">")
-            append("<a href=\"https://ko-fi.com/marcomorosi06\" target=\"_blank\">☕ Support me on Ko-fi</a>")
+            append("<a href=\"06\" target=\"_blank\">☕ Support me on Ko-fi</a>")
             append("</div>")
 
             append("</div>")
@@ -4859,13 +4859,6 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
         )
     }
     var changelogStandalone by remember { mutableStateOf(SettingsRepository.hasSeenWelcome()) }
-    var showDonation        by remember {
-        mutableStateOf(
-            SettingsRepository.hasSeenWelcome() &&
-                    SettingsRepository.isDonationQualified() &&
-                    System.currentTimeMillis() >= SettingsRepository.donationSnoozeUntil()
-        )
-    }
     var updateBanner        by remember { mutableStateOf<UpdateChecker.Result.Available?>(null) }
     var versionAhead        by remember { mutableStateOf<UpdateChecker.Result.Ahead?>(null) }
     var manualUpdateResult  by remember { mutableStateOf<UpdateChecker.Result?>(null) }
@@ -5412,7 +5405,7 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
                         confirmButton = {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = {
-                                    runCatching { openUrl("https://www.marcomorosi.eu/wifi-audio-streaming/download/") }
+                                    runCatching { openUrl("https://github.com/mu23XR/AudioBridge/releases") }
                                     NetworkHandler_v1.clearProtocolMismatch()
                                 }) { Text(Strings.get("protocol_incompatible_website")) }
                                 TextButton(onClick = {
@@ -5427,26 +5420,6 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
                         },
                         dismissButton = {
                             TextButton(onClick = { NetworkHandler_v1.clearProtocolMismatch() }) { Text(Strings.get("close")) }
-                        }
-                    )
-                }
-
-                val unresponsiveServer by NetworkHandler_v1.unresponsiveServer.collectAsState()
-                if (unresponsiveServer != null) {
-                    val peerName = unresponsiveServer!!
-                    AlertDialog(
-                        onDismissRequest = { NetworkHandler_v1.clearUnresponsiveServer() },
-                        icon  = { Icon(Icons.Default.Warning, contentDescription = null) },
-                        title = { Text(Strings.get("server_silent_title")) },
-                        text  = { Text(Strings.get("server_silent_body", peerName)) },
-                        confirmButton = {
-                            Button(onClick = {
-                                runCatching { openUrl("https://www.marcomorosi.eu/wifi-audio-streaming/download/") }
-                                NetworkHandler_v1.clearUnresponsiveServer()
-                            }) { Text(Strings.get("protocol_incompatible_website")) }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { NetworkHandler_v1.clearUnresponsiveServer() }) { Text(Strings.get("close")) }
                         }
                     )
                 }
@@ -6153,43 +6126,6 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
                                 SettingsRepository.setLastSeenChangelog(Changelog.latest.version)
                             }
                         )
-
-                        if (showDonation && !showWelcome && !showChangelog) {
-                            val snoozeLater = {
-                                showDonation = false
-                                val c = SettingsRepository.donationDismissCount() + 1
-                                SettingsRepository.setDonationDismissCount(c)
-                                SettingsRepository.setDonationQualified(false)
-                                SettingsRepository.setDonationSnoozeUntil(System.currentTimeMillis() + SettingsRepository.donationBackoffDays(c) * 24 * 60 * 60 * 1000)
-                            }
-                            val snooze30 = {
-                                showDonation = false
-                                SettingsRepository.setDonationDismissCount(4)
-                                SettingsRepository.setDonationQualified(false)
-                                SettingsRepository.setDonationSnoozeUntil(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000)
-                            }
-                            AlertDialog(
-                                onDismissRequest = snoozeLater,
-                                icon  = { Icon(Icons.Outlined.Favorite, contentDescription = null) },
-                                title = { Text(Strings.get("donation_title")) },
-                                text  = { Text(Strings.get("donation_body")) },
-                                confirmButton = {
-                                    Button(onClick = {
-                                        runCatching { openUrl("https://ko-fi.com/marcomorosi") }
-                                        showDonation = false
-                                        SettingsRepository.setDonationDismissCount(0)
-                                        SettingsRepository.setDonationQualified(false)
-                                        SettingsRepository.setDonationSnoozeUntil(System.currentTimeMillis() + 14L * 24 * 60 * 60 * 1000)
-                                    }) { Text(Strings.get("donation_support")) }
-                                },
-                                dismissButton = {
-                                    Row {
-                                        TextButton(onClick = snooze30) { Text(Strings.get("donation_dismiss_30")) }
-                                        TextButton(onClick = snoozeLater) { Text(Strings.get("donation_later")) }
-                                    }
-                                }
-                            )
-                        }
 
                         updateBanner?.let { info ->
                             AlertDialog(

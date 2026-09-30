@@ -579,52 +579,6 @@ class SettingsDataStore(context: Context) {
         dataStore.edit { p -> p[key] = e }
     }
 
-    suspend fun isDonationQualified(): Boolean {
-        val key = booleanPreferencesKey("donation_qualified")
-        return dataStore.data.first()[key] ?: false
-    }
-    suspend fun setDonationQualified(b: Boolean) {
-        val key = booleanPreferencesKey("donation_qualified")
-        dataStore.edit { p -> p[key] = b }
-    }
-    suspend fun donationSnoozeUntil(): Long {
-        val key = androidx.datastore.preferences.core.longPreferencesKey("donation_snooze_until")
-        return dataStore.data.first()[key] ?: 0L
-    }
-    suspend fun setDonationSnoozeUntil(t: Long) {
-        val key = androidx.datastore.preferences.core.longPreferencesKey("donation_snooze_until")
-        dataStore.edit { p -> p[key] = t }
-    }
-    suspend fun donationDismissCount(): Int {
-        val key = androidx.datastore.preferences.core.intPreferencesKey("donation_dismiss_count")
-        return dataStore.data.first()[key] ?: 0
-    }
-    suspend fun setDonationDismissCount(n: Int) {
-        val key = androidx.datastore.preferences.core.intPreferencesKey("donation_dismiss_count")
-        dataStore.edit { p -> p[key] = n }
-    }
-    suspend fun donationSupported(): Boolean {
-        val key = booleanPreferencesKey("donation_supported")
-        return dataStore.data.first()[key] ?: false
-    }
-    suspend fun setDonationSupported(b: Boolean) {
-        val key = booleanPreferencesKey("donation_supported")
-        dataStore.edit { p -> p[key] = b }
-    }
-    suspend fun resetDonationPrompt() {
-        setDonationSupported(false)
-        setDonationQualified(true)
-        setDonationDismissCount(0)
-        setDonationSnoozeUntil(0L)
-    }
-
-    fun donationBackoffDays(count: Int): Long = when {
-        count <= 1 -> 2L
-        count == 2 -> 5L
-        count == 3 -> 14L
-        else -> 30L
-    }
-
     suspend fun saveStreamingPort(port: Int) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.STREAMING_PORT] = port

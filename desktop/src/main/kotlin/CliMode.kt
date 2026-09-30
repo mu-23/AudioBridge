@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Marco Morosi
+ * Copyright AudioBridge
  *
  * Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
  * the European Commission - subsequent versions of the EUPL (the "Licence");
@@ -365,7 +365,7 @@ private fun printCliWelcome() {
     println(bold("  |") + " ".repeat(w) + bold("|"))
     println(bold("  |") + "  " + cyan("Android app:") + "  " + bold("|"))
     println(bold("  |") + "  " + dim("https://github.com/mu23XR/AudioBridge") + "      " + bold("|"))
-    println(bold("  |") + "  " + dim("WiFiAudioStreaming-Android/releases") + "    " + bold("|"))
+    println(bold("  |") + "  " + dim("AudioBridge-Android/releases") + "    " + bold("|"))
     println(bold("  |") + " ".repeat(w) + bold("|"))
     println(bold("  |") + "  " + Strings.get("cli_welcome_path_tip") + "  " + bold("|"))
     println(bold("  |") + "  " + dim(Strings.get("cli_welcome_path_how")) + "  " + bold("|"))

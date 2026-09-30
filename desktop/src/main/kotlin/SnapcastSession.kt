@@ -342,7 +342,7 @@ class SnapcastSessionManager(
 
     private fun mdnsInstanceName(): String {
         val base = hostName.filter { it.isLetterOrDigit() || it == '-' || it == ' ' }.trim()
-        return if (base.isEmpty()) "WiFi Audio Streaming" else base
+        return if (base.isEmpty()) "AudioBridge" else base
     }
 
     private fun localMacAddress(): String = runCatching {

@@ -84,3 +84,18 @@ AudioPolicy and exit.
 - Receiver liveness is independent of PCM availability.
 - New Android installs default to 20 ms WFAS target latency.
 - Receiver startup preroll is 10 ms; excessive AudioTrack backlog is corrected aggressively.
+
+
+## Active issue tracker
+
+GitHub Issues are the authoritative task list for unresolved work.
+
+Current stabilization tracker:
+- #6 Android stabilization before next stable release
+
+Blocking bugs:
+- #3 Recents removal can leave Shizuku bridge/audio route alive
+- #4 Shizuku SEND can disconnect after prolonged source silence
+- #5 WFAS playback latency can become unexpectedly large
+
+Do not treat a code change or green CI as proof that these are fixed. Follow each Issue's real-device acceptance criteria before closing it.

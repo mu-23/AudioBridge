@@ -105,6 +105,59 @@ object ClientSessionController {
     }
 
     /**
+     * Explicit command from the persistent notification: rebuild the current
+     * receiver transport even when RECEIVE is already the selected role.
+     *
+     * The remembered target and in-process auth key are preserved. Starting a
+     * new attempt cancels the old NetworkManager transport, so this behaves as
+     * a real reconnect rather than a no-op state selection.
+     */
+    @SuppressLint("MissingPermission")
+    fun restartCurrent(context: Context) {
+        val app = context.applicationContext
+        appContext = app
+        RoleSelectionGate.initialize(app)
+        RoleSelectionGate.selectReceiver(app)
+        StreamingActionReceiver.clearTaskRemovedStop(app)
+        NetworkManager.startNetworkWatch(app)
+
+        val target = desiredTarget ?: restoreDesiredTarget(app)
+        if (target == null) {
+            // No remembered peer: stay in RECEIVE and let discovery/auto-connect
+            // do its normal work instead of inventing a target.
+            enterReceiverMode(app)
+            return
+        }
+
+        desiredConnected = false
+        generation += 1
+        reconnectAttempt = 0
+        attemptInFlight = false
+        reconnectJob?.cancel()
+        reconnectJob = null
+        statusJob?.cancel()
+        statusJob = null
+        restoreJob?.cancel()
+        restoreJob = null
+        if (reconnectOwnsDiscovery) {
+            NetworkManager.stopListeningForDevices()
+            reconnectOwnsDiscovery = false
+        }
+
+        generation += 1
+        val token = generation
+        desiredConnected = true
+        desiredTarget = target
+        reconnectAttempt = 0
+        attemptInFlight = false
+
+        ensureClientService(app)
+        installStatusObserver(app, token)
+        Log.i(TAG, "notification RECEIVE requested; rebuilding current client transport")
+        startAttempt(app, target, token)
+    }
+
+    /**
      * Called by ClientService when Android restarts/re-delivers the service.
      * It does not create a new user intent; it only resumes the existing one.
      */

@@ -721,16 +721,6 @@ object NetworkHandler_v1 {
     private var micReceiverJob:  Job? = null
     private var localMicMixJob:  Job? = null
     private var httpServerJob:   Job? = null
-    private var donationTimerJob: Job? = null
-
-    private fun startDonationTimer() {
-        donationTimerJob?.cancel()
-        donationTimerJob = scope.launch {
-            delay(3 * 60 * 1000L)
-            SettingsRepository.setDonationQualified(true)
-        }
-    }
-    private fun cancelDonationTimer() { donationTimerJob?.cancel(); donationTimerJob = null }
     private var rtpJob:          Job? = null
 
     private val lifecycleMutex = Mutex()
@@ -2648,7 +2638,6 @@ object NetworkHandler_v1 {
             onStatusUpdate("wfas_no_protocol_desc", emptyArray())
             return
         }
-        startDonationTimer()
         if (micRoutingMode != MicRoutingMode.OFF) {
             micReceiverJob = scope.launchMicReceiver(
                 audioSettings, isMulticast, micRoutingMode, micOutputMixerInfo, micPort, micMixInputInfo, onStatusUpdate
@@ -3305,7 +3294,6 @@ object NetworkHandler_v1 {
         onAudioFrame: ((ShortArray) -> Unit)? = null,
         onStatusUpdate: (key: String, args: Array<out Any>) -> Unit
     ) {
-        startDonationTimer()
         // Protocol selection: WFAS > RTP > HTTP
         val caps         = serverInfo.capabilities
         val wfasAvailable = caps == null || StreamingProtocol.WFAS in caps.protocols
@@ -4439,7 +4427,6 @@ object NetworkHandler_v1 {
     private suspend fun stopCurrentStreamLocked() {
         CaptureMonitor.clear()
         stopAnnouncingPresence()
-        cancelDonationTimer()
 
         unicastPeerConnected.value = false
         sessionEncryptedLive.value = false

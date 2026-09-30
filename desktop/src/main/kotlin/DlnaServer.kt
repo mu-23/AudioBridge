@@ -343,7 +343,7 @@ class DlnaMediaServer(
             val output = socket.getOutputStream()
 
             if (codec == null) {
-                val body = "WiFi Audio Streaming DLNA endpoint".toByteArray()
+                val body = "AudioBridge DLNA endpoint".toByteArray()
                 output.write(
                     ("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: ${body.size}\r\n" +
                             "Connection: close\r\n\r\n").toByteArray()

@@ -1125,26 +1125,6 @@ fun ProtocolMismatchDialog(
 }
 
 @Composable
-fun UnresponsiveServerDialog(
-    peerName: String,
-    onUpdate: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    ExpressiveVersionDialog(
-        icon = Icons.Outlined.SyncProblem,
-        accent = MaterialTheme.colorScheme.error,
-        title = stringResource(R.string.server_silent_title),
-        body = stringResource(R.string.server_silent_body, peerName),
-        fromVersion = null,
-        toVersion = null,
-        confirmLabel = stringResource(R.string.protocol_incompatible_website),
-        dismissLabel = stringResource(R.string.close),
-        onConfirm = onUpdate,
-        onDismiss = onDismiss
-    )
-}
-
-@Composable
 fun NotificationPermissionDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit

@@ -116,6 +116,10 @@ jobs:
           chmod +x gradlew
           ./gradlew :app:testDebugUnitTest --stacktrace
 
+      - name: Run Android lint
+        working-directory: android
+        run: ./gradlew :app:lintDebug --stacktrace
+
       - name: Build Android release APK
         working-directory: android
         run: ./gradlew :app:assembleRelease --stacktrace
@@ -167,6 +171,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           validate-wrappers: true
+
+      - name: Run Desktop checks
+        working-directory: desktop
+        run: .\gradlew.bat check
 
       - name: Build Windows portable package
         working-directory: desktop

@@ -49,6 +49,14 @@ Desktop:
 - discovery/reconnect/tray/volume
 - unified GitHub Releases with Android
 
+## Latest test.16 release and device evidence
+
+The Android/Desktop/prerelease gate passed and `v1.3.1-test.16` is published. Both authorized wireless devices installed it in place with the permanent signer (`4D:DF:26:7D:25:A7:3F:0A:28:44:6C:9E:77:29:32:04:E3:2F:67:77:C6:34:17:FE:B7:BD:92:50:40:FE:FB:63`). On the tablet, SEND started from speaker volume 0 and media-muted state; test.16 cleared mute, selected `remote_submix`, and kept speaker index 0. This verifies startup volume preservation for that tablet session.
+
+The phone's active media output was wired headphones (`headphone(8)`), Bluetooth was disconnected, and its media index on that route was 10; the phone speaker index was 21. The user confirmed a wired headset is attached. This explains why the phone speaker stays silent during receive. The user confirmed receive audio is audible through the connected headset. No phone volume index or routing was changed. The test.16 process was force-stopped/restarted after in-place upgrade to ensure fresh code. An earlier heartbeat timeout came from a pre-existing receiver process and does not count as test.16 silence acceptance.
+
+On a fresh test.16 process, the generated 208-second audio fixture included 185 seconds of exact digital silence followed by tone; the sender continued sending and the user later confirmed audio from the phone headset. The tablet Recents card was swiped away while SEND was active; the owner-death bridge cleanup completed in about 0.8 seconds, the route returned to speaker, and speaker volume 0/mute true were restored. These pass the observed-session checks for #3, #4 and #10; issues stay open for repeated/manual criteria. Test.15 remains published but was superseded after a real-device volume regression; do not describe it as validated.
+
 ## Current task-removal cleanup fix
 
 The Shizuku AudioPolicy cleanup now prefers Android's synchronous

@@ -630,7 +630,7 @@ object PairCli {
         return if (r.isSuccess) {
             val ok = ProtocolRegistrar.isRegistered()
             if (json) println(jsonObject("status" to "ok", "registered" to ok, "scheme" to ProtocolRegistrar.SCHEME))
-            else println("  ${green("✓")}  ${ProtocolRegistrar.SCHEME}:// links now open WiFi Audio Streaming.")
+            else println("  ${green("✓")}  ${ProtocolRegistrar.SCHEME}:// links now open AudioBridge.")
             ExitCode.OK
         } else {
             fail(

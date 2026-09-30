@@ -1,6 +1,6 @@
-# Privacy Policy for WiFi Audio Streaming  
+# Privacy Policy for AudioBridge  
 
-This Privacy Policy describes how the **WiFi Audio Streaming** mobile application handles user information and data.  
+This Privacy Policy describes how the **AudioBridge** mobile application handles user information and data.  
 
 ---
 

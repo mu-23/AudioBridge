@@ -3495,28 +3495,20 @@ object NetworkManager {
                                         .links { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
                                         .links a { text-decoration: none; color: var(--text); background: rgba(255,255,255,0.05); padding: 14px; border-radius: 16px; font-size: 14px; transition: background 0.2s; border: 1px solid rgba(255,255,255,0.05); font-weight: 500; }
                                         .links a:hover { background: rgba(255,255,255,0.1); }
-                                        .kofi { margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
-                                        .kofi a { color: #FF5E5B; text-decoration: none; font-weight: bold; font-size: 15px; transition: opacity 0.2s; }
-                                        .kofi a:hover { opacity: 0.8; }
                                     </style>
                                 </head>
                                 <body>
                                     <div class="card">
                                         <div class="icon">🎧</div>
-                                        <h2>WiFi Audio Streaming</h2>
+                                        <h2>AudioBridge</h2>
                                         <p class="subtitle">Codec AAC</p>
                                         
                                         <audio id="player" controls src="/stream"></audio>
                                         <button id="playBtn" class="play-btn" onclick="document.getElementById('player').style.display='block'; document.getElementById('player').play(); this.style.display='none';">▶ PLAY AUDIO</button>
 
                                         <div class="links">
-                                            <a href="https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop" target="_blank">💻 Get Desktop App (GitHub)</a>
-                                            <a href="https://github.com/marcomorosi06/WiFiAudioStreaming-Android" target="_blank">📱 Get Android App (GitHub)</a>
-                                            <a href="https://apt.izzysoft.de/fdroid/index/apk/com.cuscus.wifiaudiostreaming" target="_blank">📲 Get Android App (IzzyOnDroid)</a>
-                                        </div>
-
-                                        <div class="kofi">
-                                            <a href="https://ko-fi.com/marcomorosi" target="_blank">☕ Support me on Ko-fi</a>
+                                            <a href="https://github.com/mu23XR/AudioBridge/releases" target="_blank">⬇ AudioBridge Releases</a>
+                                            <a href="https://github.com/mu23XR/AudioBridge" target="_blank">⌘ AudioBridge Source</a>
                                         </div>
                                     </div>
                                 </body>

@@ -1457,7 +1457,6 @@ fun SettingsScreenContent(
                             context.startActivity(intent)
                         }
                     )
-                    )
                 }
             }
 

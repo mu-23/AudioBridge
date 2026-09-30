@@ -3584,7 +3584,7 @@ fun WelcomePage(
 ) {
     val context = LocalContext.current
     val haptic = rememberAppHaptics()
-    val link = "https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop"
+    val link = "https://github.com/mu23XR/AudioBridge/releases"
 
     var visible by remember { mutableStateOf(false) }
     var showPrivacyDetail by remember { mutableStateOf(false) }

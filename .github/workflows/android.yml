@@ -61,5 +61,8 @@ jobs:
           chmod +x gradlew
           ./gradlew :app:testDebugUnitTest --stacktrace
 
+      - name: Run Android lint
+        run: ./gradlew :app:lintDebug --stacktrace
+
       - name: Compile Android APK (not published)
         run: ./gradlew :app:assembleDebug --stacktrace

@@ -27,7 +27,7 @@ fun rtpSdpChecks() {
     val wfas = """
         v=0
         o=- 1788900000 1788900000 IN IP4 192.168.1.10
-        s=WiFi Audio Streaming
+        s=AudioBridge
         i=WFAS RTP stream -wfas.app
         c=IN IP4 239.255.0.1/4
         t=0 0
@@ -45,7 +45,7 @@ fun rtpSdpChecks() {
         eq("wfas: rate", r.source?.sampleRate, 48000)
         eq("wfas: canali", r.source?.channels, 2)
         eq("wfas: pt", r.source?.payloadType, 96)
-        eq("wfas: nome", r.source?.name, "WiFi Audio Streaming")
+        eq("wfas: nome", r.source?.name, "AudioBridge")
         check("wfas: multicast", r.source?.isMulticast == true)
         check("wfas: percorso nativo", r.source?.isNativePcm == true)
         check("wfas: nessun avviso", r.warnings.isEmpty(), r.warnings.toString())

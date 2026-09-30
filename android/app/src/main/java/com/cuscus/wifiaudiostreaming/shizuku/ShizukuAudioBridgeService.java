@@ -20,6 +20,8 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Build;
+import android.os.IBinder;
+import android.os.RemoteException;
 import android.os.Process;
 import android.util.Log;
 
@@ -67,7 +69,10 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
     private volatile float streamVolume = 1.0f;
     private volatile Object registeredAudioPolicy;
     private volatile Class<?> registeredAudioPolicyClass;
+    private volatile AudioManager registeredAudioManager;
     private volatile String activeCaptureMode = "none";
+    private volatile IBinder ownerToken;
+    private volatile IBinder.DeathRecipient ownerDeathRecipient;
 
     public ShizukuAudioBridgeService() {
         this.context = null;
@@ -87,7 +92,8 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
             int channels,
             int packetBytes,
             boolean keepPlayingOnDevice,
-            boolean persistAfterClient
+            boolean persistAfterClient,
+            IBinder ownerToken
     ) {
         stopBridgeInternal();
 
@@ -106,6 +112,14 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
         }
         if (sampleRate < 8000 || sampleRate > 192000) {
             status = "error: invalid sample rate " + sampleRate;
+            return status;
+        }
+
+        try {
+            attachOwner(ownerToken);
+        } catch (Throwable t) {
+            status = "error: owner process unavailable: " + String.valueOf(t.getMessage());
+            Log.e(TAG, "could not attach owner process token", t);
             return status;
         }
 
@@ -160,6 +174,7 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
 
         } catch (Throwable t) {
             releaseCapture();
+            detachOwner();
             status = "error: build=" + BuildConfig.VERSION_CODE + " " + t.getClass().getSimpleName() + ": " + String.valueOf(t.getMessage());
             Log.e(TAG, "capture start failed", t);
             return status;
@@ -239,7 +254,43 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
         }
 
         releaseCapture();
+        detachOwner();
         status = "idle";
+    }
+
+    private synchronized void attachOwner(IBinder token) throws RemoteException {
+        detachOwner();
+        if (token == null) {
+            throw new IllegalArgumentException("ownerToken is null");
+        }
+
+        IBinder.DeathRecipient recipient = () -> {
+            Log.w(TAG, "owner app process died; stopping Shizuku bridge");
+            Thread cleanup = new Thread(() -> {
+                stopBridgeInternal();
+                Log.w(TAG, "owner-death cleanup complete; exiting UserService");
+                System.exit(0);
+            }, "wfas-owner-death-cleanup");
+            cleanup.setDaemon(false);
+            cleanup.start();
+        };
+
+        token.linkToDeath(recipient, 0);
+        ownerToken = token;
+        ownerDeathRecipient = recipient;
+    }
+
+    private synchronized void detachOwner() {
+        IBinder token = ownerToken;
+        IBinder.DeathRecipient recipient = ownerDeathRecipient;
+        ownerToken = null;
+        ownerDeathRecipient = null;
+        if (token != null && recipient != null) {
+            try {
+                token.unlinkToDeath(recipient, 0);
+            } catch (Throwable ignored) {
+            }
+        }
     }
 
     private void runServer(
@@ -420,6 +471,7 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
         int seq = 0;
         long samplePosition = 0;
         long packets = 0;
+        long lastSilenceKeepaliveAt = 0L;
 
         try {
             while (running.get() && sessionAlive.get()) {
@@ -436,6 +488,30 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
                     throw new IllegalStateException("AudioRecord.read failed: " + read);
                 }
                 if (read == 0) {
+                    long now = System.currentTimeMillis();
+                    if (now - lastSilenceKeepaliveAt >= 1_000L) {
+                        byte[] keepalive = new byte[HEADER_SIZE];
+                        keepalive[0] = MAGIC_0;
+                        keepalive[1] = MAGIC_1;
+                        keepalive[2] = (byte) PROTOCOL_VERSION;
+                        keepalive[3] = 0x01; // silence/liveness, no PCM payload
+                        keepalive[4] = (byte) ((seq >>> 8) & 0xFF);
+                        keepalive[5] = (byte) (seq & 0xFF);
+                        ByteBuffer.wrap(keepalive, 6, 4)
+                                .order(ByteOrder.BIG_ENDIAN)
+                                .putInt((int) (samplePosition & 0xFFFFFFFFL));
+
+                        InetSocketAddress target = client.get();
+                        s.send(new DatagramPacket(
+                                keepalive,
+                                keepalive.length,
+                                target.getAddress(),
+                                target.getPort()
+                        ));
+                        seq = (seq + 1) & 0xFFFF;
+                        packets++;
+                        lastSilenceKeepaliveAt = now;
+                    }
                     try {
                         Thread.sleep(2);
                     } catch (InterruptedException e) {
@@ -686,14 +762,14 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
         Object audioPolicy = audioPolicyBuilderClass.getMethod("build").invoke(audioPolicyBuilder);
 
         int result;
+        AudioManager policyAudioManager = policyContext.getSystemService(AudioManager.class);
         if (preferSystemContext) {
             try {
-                Object audioManager = policyContext.getSystemService(AudioManager.class);
                 Method register = AudioManager.class.getMethod(
                         "registerAudioPolicy",
                         audioPolicyClass
                 );
-                result = (Integer) register.invoke(audioManager, audioPolicy);
+                result = (Integer) register.invoke(policyAudioManager, audioPolicy);
             } catch (Throwable instanceFailure) {
                 Log.w(TAG, "instance registerAudioPolicy unavailable; using static", instanceFailure);
                 Method register = AudioManager.class
@@ -727,6 +803,7 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
 
             registeredAudioPolicy = audioPolicy;
             registeredAudioPolicyClass = audioPolicyClass;
+            registeredAudioManager = policyAudioManager;
             return resultRecord;
         } catch (Throwable t) {
             if (resultRecord != null) {
@@ -735,7 +812,7 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
                 } catch (Throwable ignored) {
                 }
             }
-            unregisterPolicy(audioPolicy, audioPolicyClass);
+            unregisterPolicy(policyAudioManager, audioPolicy, audioPolicyClass);
             throw t;
         }
     }
@@ -888,7 +965,8 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
         }
     }
 
-    private synchronized void releaseCapture() {        AudioRecord r = recorder;
+    private synchronized void releaseCapture() {
+        AudioRecord r = recorder;
         recorder = null;
         if (r != null) {
             try {
@@ -903,14 +981,48 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
 
         Object policy = registeredAudioPolicy;
         Class<?> policyClass = registeredAudioPolicyClass;
+        AudioManager audioManager = registeredAudioManager;
         registeredAudioPolicy = null;
         registeredAudioPolicyClass = null;
+        registeredAudioManager = null;
+        activeCaptureMode = "none";
+
         if (policy != null && policyClass != null) {
-            unregisterPolicy(policy, policyClass);
+            unregisterPolicy(audioManager, policy, policyClass);
         }
     }
 
-    private static void unregisterPolicy(Object policy, Class<?> policyClass) {
+    /**
+     * Task removal can destroy the Shizuku UserService immediately after stopBridge().
+     * AudioManager.unregisterAudioPolicyAsyncStatic() is explicitly asynchronous, so
+     * killing the UserService right afterwards can leave an OEM audio route/volume
+     * context behind. Prefer the synchronous unregisterAudioPolicy() call and only
+     * fall back to the asynchronous hidden API on frameworks where the synchronous
+     * method cannot be reflected.
+     */
+    private static void unregisterPolicy(
+            AudioManager audioManager,
+            Object policy,
+            Class<?> policyClass
+    ) {
+        Throwable syncFailure = null;
+
+        if (audioManager != null) {
+            try {
+                Method unregister = AudioManager.class.getDeclaredMethod(
+                        "unregisterAudioPolicy",
+                        policyClass
+                );
+                unregister.setAccessible(true);
+                unregister.invoke(audioManager, policy);
+                Log.i(TAG, "AudioPolicy synchronously unregistered");
+                return;
+            } catch (Throwable t) {
+                syncFailure = t;
+                Log.w(TAG, "synchronous AudioPolicy unregister failed; falling back", t);
+            }
+        }
+
         try {
             Method unregister = AudioManager.class.getDeclaredMethod(
                     "unregisterAudioPolicyAsyncStatic",
@@ -918,8 +1030,12 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
             );
             unregister.setAccessible(true);
             unregister.invoke(null, policy);
-        } catch (Throwable t) {
-            Log.w(TAG, "could not unregister AudioPolicy: " + t.getMessage());
+            Log.i(TAG, "AudioPolicy async fallback requested");
+        } catch (Throwable asyncFailure) {
+            if (syncFailure != null) {
+                asyncFailure.addSuppressed(syncFailure);
+            }
+            Log.e(TAG, "could not unregister AudioPolicy", asyncFailure);
         }
     }
 

@@ -169,7 +169,7 @@ data class AppSettings(
     val disconnectionSoundEnabled: Boolean = true,
     val lastSeenChangelogVersion: String = "",
     val autoUpdateCheckEnabled: Boolean = true,
-    val latencyMs: Int = 40,
+    val latencyMs: Int = 20,
     val maxPayloadBytes: Int = 1390,
     val securityMode: String = "OFF",
     val authKey: String = "",
@@ -398,7 +398,7 @@ class SettingsDataStore(context: Context) {
             noiseReductionStrength = preferences[PreferencesKeys.NOISE_REDUCTION_STRENGTH] ?: 50,
             lastSeenChangelogVersion = preferences[PreferencesKeys.LAST_SEEN_CHANGELOG_VERSION] ?: "",
             autoUpdateCheckEnabled = preferences[PreferencesKeys.AUTO_UPDATE_CHECK_ENABLED] ?: true,
-            latencyMs = preferences[PreferencesKeys.LATENCY_MS] ?: 40,
+            latencyMs = preferences[PreferencesKeys.LATENCY_MS] ?: 20,
             maxPayloadBytes = preferences[PreferencesKeys.MAX_PAYLOAD] ?: 1390,
             securityMode = preferences[PreferencesKeys.SECURITY_MODE] ?: "OFF",
             authKey = authKeys.authKey,
@@ -577,52 +577,6 @@ class SettingsDataStore(context: Context) {
     suspend fun setMcastClientEpoch(ip: String, e: Long) {
         val key = androidx.datastore.preferences.core.longPreferencesKey("mcast_epoch_$ip")
         dataStore.edit { p -> p[key] = e }
-    }
-
-    suspend fun isDonationQualified(): Boolean {
-        val key = booleanPreferencesKey("donation_qualified")
-        return dataStore.data.first()[key] ?: false
-    }
-    suspend fun setDonationQualified(b: Boolean) {
-        val key = booleanPreferencesKey("donation_qualified")
-        dataStore.edit { p -> p[key] = b }
-    }
-    suspend fun donationSnoozeUntil(): Long {
-        val key = androidx.datastore.preferences.core.longPreferencesKey("donation_snooze_until")
-        return dataStore.data.first()[key] ?: 0L
-    }
-    suspend fun setDonationSnoozeUntil(t: Long) {
-        val key = androidx.datastore.preferences.core.longPreferencesKey("donation_snooze_until")
-        dataStore.edit { p -> p[key] = t }
-    }
-    suspend fun donationDismissCount(): Int {
-        val key = androidx.datastore.preferences.core.intPreferencesKey("donation_dismiss_count")
-        return dataStore.data.first()[key] ?: 0
-    }
-    suspend fun setDonationDismissCount(n: Int) {
-        val key = androidx.datastore.preferences.core.intPreferencesKey("donation_dismiss_count")
-        dataStore.edit { p -> p[key] = n }
-    }
-    suspend fun donationSupported(): Boolean {
-        val key = booleanPreferencesKey("donation_supported")
-        return dataStore.data.first()[key] ?: false
-    }
-    suspend fun setDonationSupported(b: Boolean) {
-        val key = booleanPreferencesKey("donation_supported")
-        dataStore.edit { p -> p[key] = b }
-    }
-    suspend fun resetDonationPrompt() {
-        setDonationSupported(false)
-        setDonationQualified(true)
-        setDonationDismissCount(0)
-        setDonationSnoozeUntil(0L)
-    }
-
-    fun donationBackoffDays(count: Int): Long = when {
-        count <= 1 -> 2L
-        count == 2 -> 5L
-        count == 3 -> 14L
-        else -> 30L
     }
 
     suspend fun saveStreamingPort(port: Int) {

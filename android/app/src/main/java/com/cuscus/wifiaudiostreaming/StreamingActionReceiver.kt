@@ -40,8 +40,8 @@ class StreamingActionReceiver : BroadcastReceiver() {
                 context,
                 VolumeOverlayController.MODE_CLIENT
             )
-            ACTION_MODE_SEND -> RuntimeModeController.startSender(context)
-            ACTION_MODE_RECEIVE -> RuntimeModeController.selectReceiver(context)
+            ACTION_MODE_SEND -> RuntimeModeController.restartSender(context)
+            ACTION_MODE_RECEIVE -> RuntimeModeController.restartReceiver(context)
             ACTION_MODE_OFF -> RuntimeModeController.selectOff(context)
         }
     }

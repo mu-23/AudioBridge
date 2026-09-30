@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Marco Morosi
+ * Copyright AudioBridge
  *
  * Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
  * the European Commission - subsequent versions of the EUPL (the "Licence");
@@ -194,7 +194,6 @@ object NetworkManager {
         val appCtx = context.applicationContext
         donationTimerJob = scope.launch {
             delay(3 * 60 * 1000L)
-            com.cuscus.wifiaudiostreaming.data.SettingsDataStore(appCtx).setDonationQualified(true)
         }
     }
     fun cancelDonationTimer() { donationTimerJob?.cancel(); donationTimerJob = null }
@@ -479,10 +478,6 @@ object NetworkManager {
     private const val SILENT_PEER_TIMEOUT_MS = 6000L
 
     fun clearProtocolMismatch() { protocolMismatch.value = null }
-
-    val unresponsiveServer = MutableStateFlow<String?>(null)
-
-    fun clearUnresponsiveServer() { unresponsiveServer.value = null }
 
     val connectionStatus = MutableStateFlow("")
     val discoveredDevices = MutableStateFlow<Map<String, ServerInfo>>(emptyMap())
@@ -2320,7 +2315,7 @@ object NetworkManager {
                         // Headroom: la coda di AudioTrack deve poter assorbire un burst senza
                         // bloccare la write, altrimenti l'arretrato migra nel socket dove non e'
                         // misurabile. Il livello reale lo tiene PlayoutGovernor scartando pacchetti.
-                        val headroomFrames = sampleRate * 200 / 1000
+                        val headroomFrames = sampleRate * 80 / 1000
                         var playbackBufferSize = minBuffer.coerceAtLeast((targetLatencyFrames + headroomFrames) * frameSize)
                         if (playbackBufferSize % frameSize != 0) {
                             playbackBufferSize += frameSize - (playbackBufferSize % frameSize)
@@ -2351,7 +2346,7 @@ object NetworkManager {
                             audioTrack!!, sampleRate, frameSize, effectiveLatencyMs, TAG
                         )
 
-                        val prerollLen = (sampleRate * frameSize * 30 / 1000)
+                        val prerollLen = (sampleRate * frameSize * 10 / 1000)
                             .coerceIn(0, playbackBufferSize - frameSize)
                             .let { it - (it % frameSize) }
                         if (prerollLen > 0) {
@@ -2405,8 +2400,6 @@ object NetworkManager {
                             ) {
                                 Log.w(TAG, "[CLIENT] nessuna risposta dopo ${SILENT_PEER_TIMEOUT_MS}ms, rinuncio")
                                 connectionStatus.value = context.getString(R.string.status_server_silent_maybe_outdated)
-                                unresponsiveServer.value =
-                                    serverInfo.hostname.ifBlank { serverInfo.ip }
                                 isStreamingCurrent.value = false
                                 withContext(Dispatchers.Main) { onServerDisconnected?.invoke() }
                                 return@launch
@@ -2587,6 +2580,14 @@ object NetworkManager {
                             val flags     = data[3].toInt() and 0xFF
                             val seq       = ((data[4].toInt() and 0xFF) shl 8) or (data[5].toInt() and 0xFF)
                             val isSilence = (flags and 0x01) != 0
+
+                            // Header-only silence packets are sender keepalives.
+                            // They prove liveness without manufacturing PCM or increasing
+                            // the AudioTrack queue while the source device is silent.
+                            if (isSilence && data.size <= HEADER_SIZE) {
+                                expectedSeq = (seq + 1) and 0xFFFF
+                                return
+                            }
 
                             LinkMetrics.onPacket(
                                 seq,
@@ -2820,7 +2821,7 @@ object NetworkManager {
                         )
                         val frameSize = if (channelConfig == "STEREO") 4 else 2
                         var playbackBufferSize = minBuffer.coerceAtLeast(
-                            (mcLatencyMs + 200) * sampleRate / 1000 * frameSize
+                            (mcLatencyMs + 80) * sampleRate / 1000 * frameSize
                         )
 
                         if (playbackBufferSize % frameSize != 0) {
@@ -3479,7 +3480,7 @@ object NetworkManager {
                                 <head>
                                     <meta charset="UTF-8">
                                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                    <title>WiFi Audio Streaming</title>
+                                    <title>AudioBridge</title>
                                     <style>
                                         :root { --bg: #0f0f0f; --surface: #1e1e1e; --primary: #BB86FC; --text: #e0e0e0; --text-mut: #888; }
                                         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
@@ -3493,28 +3494,20 @@ object NetworkManager {
                                         .links { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
                                         .links a { text-decoration: none; color: var(--text); background: rgba(255,255,255,0.05); padding: 14px; border-radius: 16px; font-size: 14px; transition: background 0.2s; border: 1px solid rgba(255,255,255,0.05); font-weight: 500; }
                                         .links a:hover { background: rgba(255,255,255,0.1); }
-                                        .kofi { margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
-                                        .kofi a { color: #FF5E5B; text-decoration: none; font-weight: bold; font-size: 15px; transition: opacity 0.2s; }
-                                        .kofi a:hover { opacity: 0.8; }
                                     </style>
                                 </head>
                                 <body>
                                     <div class="card">
                                         <div class="icon">🎧</div>
-                                        <h2>WiFi Audio Streaming</h2>
+                                        <h2>AudioBridge</h2>
                                         <p class="subtitle">Codec AAC</p>
                                         
                                         <audio id="player" controls src="/stream"></audio>
                                         <button id="playBtn" class="play-btn" onclick="document.getElementById('player').style.display='block'; document.getElementById('player').play(); this.style.display='none';">▶ PLAY AUDIO</button>
 
                                         <div class="links">
-                                            <a href="https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop" target="_blank">💻 Get Desktop App (GitHub)</a>
-                                            <a href="https://github.com/marcomorosi06/WiFiAudioStreaming-Android" target="_blank">📱 Get Android App (GitHub)</a>
-                                            <a href="https://apt.izzysoft.de/fdroid/index/apk/com.cuscus.wifiaudiostreaming" target="_blank">📲 Get Android App (IzzyOnDroid)</a>
-                                        </div>
-
-                                        <div class="kofi">
-                                            <a href="https://ko-fi.com/marcomorosi" target="_blank">☕ Support me on Ko-fi</a>
+                                            <a href="https://github.com/mu23XR/AudioBridge/releases" target="_blank">⬇ AudioBridge Releases</a>
+                                            <a href="https://github.com/mu23XR/AudioBridge" target="_blank">⌘ AudioBridge Source</a>
                                         </div>
                                     </div>
                                 </body>

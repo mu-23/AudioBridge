@@ -721,16 +721,6 @@ object NetworkHandler_v1 {
     private var micReceiverJob:  Job? = null
     private var localMicMixJob:  Job? = null
     private var httpServerJob:   Job? = null
-    private var donationTimerJob: Job? = null
-
-    private fun startDonationTimer() {
-        donationTimerJob?.cancel()
-        donationTimerJob = scope.launch {
-            delay(3 * 60 * 1000L)
-            SettingsRepository.setDonationQualified(true)
-        }
-    }
-    private fun cancelDonationTimer() { donationTimerJob?.cancel(); donationTimerJob = null }
     private var rtpJob:          Job? = null
 
     private val lifecycleMutex = Mutex()
@@ -1898,13 +1888,13 @@ object NetworkHandler_v1 {
 
             // Link e Ko-fi
             append("<div class=\"links\">")
-            append("<a href=\"https://github.com/mu-23/AudioBridge\" target=\"_blank\">💻 Get Desktop App (GitHub)</a>")
-            append("<a href=\"https://github.com/mu-23/AudioBridge\" target=\"_blank\">📱 Get Android App (GitHub)</a>")
-            append("<a href=\"https://apt.izzysoft.de/fdroid/index/apk/com.cuscus.wifiaudiostreaming\" target=\"_blank\">📲 Get Android App (IzzyOnDroid)</a>")
+            append("<a href=\"https://github.com/mu23XR/AudioBridge\" target=\"_blank\">💻 Get Desktop App (GitHub)</a>")
+            append("<a href=\"https://github.com/mu23XR/AudioBridge\" target=\"_blank\">📱 Get Android App (GitHub)</a>")
+            append("<a href=\"https://github.com/mu23XR/AudioBridge/releases\" target=\"_blank\">📲 Get Android App (IzzyOnDroid)</a>")
             append("</div>")
 
             append("<div class=\"kofi\">")
-            append("<a href=\"https://ko-fi.com/marcomorosi06\" target=\"_blank\">☕ Support me on Ko-fi</a>")
+            append("<a href=\"06\" target=\"_blank\">☕ Support me on Ko-fi</a>")
             append("</div>")
 
             append("</div>")
@@ -2648,7 +2638,6 @@ object NetworkHandler_v1 {
             onStatusUpdate("wfas_no_protocol_desc", emptyArray())
             return
         }
-        startDonationTimer()
         if (micRoutingMode != MicRoutingMode.OFF) {
             micReceiverJob = scope.launchMicReceiver(
                 audioSettings, isMulticast, micRoutingMode, micOutputMixerInfo, micPort, micMixInputInfo, onStatusUpdate
@@ -3305,7 +3294,6 @@ object NetworkHandler_v1 {
         onAudioFrame: ((ShortArray) -> Unit)? = null,
         onStatusUpdate: (key: String, args: Array<out Any>) -> Unit
     ) {
-        startDonationTimer()
         // Protocol selection: WFAS > RTP > HTTP
         val caps         = serverInfo.capabilities
         val wfasAvailable = caps == null || StreamingProtocol.WFAS in caps.protocols
@@ -4439,7 +4427,6 @@ object NetworkHandler_v1 {
     private suspend fun stopCurrentStreamLocked() {
         CaptureMonitor.clear()
         stopAnnouncingPresence()
-        cancelDonationTimer()
 
         unicastPeerConnected.value = false
         sessionEncryptedLive.value = false
@@ -4859,13 +4846,6 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
         )
     }
     var changelogStandalone by remember { mutableStateOf(SettingsRepository.hasSeenWelcome()) }
-    var showDonation        by remember {
-        mutableStateOf(
-            SettingsRepository.hasSeenWelcome() &&
-                    SettingsRepository.isDonationQualified() &&
-                    System.currentTimeMillis() >= SettingsRepository.donationSnoozeUntil()
-        )
-    }
     var updateBanner        by remember { mutableStateOf<UpdateChecker.Result.Available?>(null) }
     var versionAhead        by remember { mutableStateOf<UpdateChecker.Result.Ahead?>(null) }
     var manualUpdateResult  by remember { mutableStateOf<UpdateChecker.Result?>(null) }
@@ -5412,14 +5392,14 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
                         confirmButton = {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = {
-                                    runCatching { openUrl("https://www.marcomorosi.eu/wifi-audio-streaming/download/") }
+                                    runCatching { openUrl("https://github.com/mu23XR/AudioBridge/releases") }
                                     NetworkHandler_v1.clearProtocolMismatch()
                                 }) { Text(Strings.get("protocol_incompatible_website")) }
                                 TextButton(onClick = {
                                     val updateUrl = if (mm.localVersion < mm.remoteVersion)
-                                        "https://github.com/mu-23/AudioBridge/releases"
+                                        "https://github.com/mu23XR/AudioBridge/releases"
                                     else
-                                        "https://github.com/mu-23/AudioBridge/releases"
+                                        "https://github.com/mu23XR/AudioBridge/releases"
                                     runCatching { openUrl(updateUrl) }
                                     NetworkHandler_v1.clearProtocolMismatch()
                                 }) { Text(Strings.get("protocol_incompatible_github")) }
@@ -5427,26 +5407,6 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
                         },
                         dismissButton = {
                             TextButton(onClick = { NetworkHandler_v1.clearProtocolMismatch() }) { Text(Strings.get("close")) }
-                        }
-                    )
-                }
-
-                val unresponsiveServer by NetworkHandler_v1.unresponsiveServer.collectAsState()
-                if (unresponsiveServer != null) {
-                    val peerName = unresponsiveServer!!
-                    AlertDialog(
-                        onDismissRequest = { NetworkHandler_v1.clearUnresponsiveServer() },
-                        icon  = { Icon(Icons.Default.Warning, contentDescription = null) },
-                        title = { Text(Strings.get("server_silent_title")) },
-                        text  = { Text(Strings.get("server_silent_body", peerName)) },
-                        confirmButton = {
-                            Button(onClick = {
-                                runCatching { openUrl("https://www.marcomorosi.eu/wifi-audio-streaming/download/") }
-                                NetworkHandler_v1.clearUnresponsiveServer()
-                            }) { Text(Strings.get("protocol_incompatible_website")) }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { NetworkHandler_v1.clearUnresponsiveServer() }) { Text(Strings.get("close")) }
                         }
                     )
                 }
@@ -6153,43 +6113,6 @@ fun startGuiApplication(cliArgs: CliArgs) = application {
                                 SettingsRepository.setLastSeenChangelog(Changelog.latest.version)
                             }
                         )
-
-                        if (showDonation && !showWelcome && !showChangelog) {
-                            val snoozeLater = {
-                                showDonation = false
-                                val c = SettingsRepository.donationDismissCount() + 1
-                                SettingsRepository.setDonationDismissCount(c)
-                                SettingsRepository.setDonationQualified(false)
-                                SettingsRepository.setDonationSnoozeUntil(System.currentTimeMillis() + SettingsRepository.donationBackoffDays(c) * 24 * 60 * 60 * 1000)
-                            }
-                            val snooze30 = {
-                                showDonation = false
-                                SettingsRepository.setDonationDismissCount(4)
-                                SettingsRepository.setDonationQualified(false)
-                                SettingsRepository.setDonationSnoozeUntil(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000)
-                            }
-                            AlertDialog(
-                                onDismissRequest = snoozeLater,
-                                icon  = { Icon(Icons.Outlined.Favorite, contentDescription = null) },
-                                title = { Text(Strings.get("donation_title")) },
-                                text  = { Text(Strings.get("donation_body")) },
-                                confirmButton = {
-                                    Button(onClick = {
-                                        runCatching { openUrl("https://ko-fi.com/marcomorosi") }
-                                        showDonation = false
-                                        SettingsRepository.setDonationDismissCount(0)
-                                        SettingsRepository.setDonationQualified(false)
-                                        SettingsRepository.setDonationSnoozeUntil(System.currentTimeMillis() + 14L * 24 * 60 * 60 * 1000)
-                                    }) { Text(Strings.get("donation_support")) }
-                                },
-                                dismissButton = {
-                                    Row {
-                                        TextButton(onClick = snooze30) { Text(Strings.get("donation_dismiss_30")) }
-                                        TextButton(onClick = snoozeLater) { Text(Strings.get("donation_later")) }
-                                    }
-                                }
-                            )
-                        }
 
                         updateBanner?.let { info ->
                             AlertDialog(

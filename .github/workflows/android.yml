@@ -2,6 +2,8 @@ name: Validate Android
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [ "main" ]
   push:
     branches: [ "main" ]
     paths:
@@ -58,6 +60,10 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew :app:testDebugUnitTest --stacktrace
+
+      - name: Run Android lint (report existing debt)
+        continue-on-error: true
+        run: ./gradlew :app:lintDebug --stacktrace
 
       - name: Compile Android APK (not published)
         run: ./gradlew :app:assembleDebug --stacktrace

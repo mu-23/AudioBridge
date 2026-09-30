@@ -8,8 +8,8 @@ import java.net.URL
 
 object UpdateChecker {
 
-    private const val REPO = "mu-23/AudioBridge"
-    const val RELEASES_URL = "https://github.com/mu-23/AudioBridge/releases/latest"
+    private const val REPO = "mu23XR/AudioBridge"
+    const val RELEASES_URL = "https://github.com/mu23XR/AudioBridge/releases/latest"
 
     sealed class Result {
         data class UpToDate(val current: String) : Result()

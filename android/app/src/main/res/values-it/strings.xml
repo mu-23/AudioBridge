@@ -78,11 +78,6 @@
     <string name="sec_ask">Approvazione</string>
     <string name="mic_sends">Invia il microfono</string>
     <string name="mic_wants">Accetta il tuo microfono</string>
-    <string name="donation_title">Ti piace AudioBridge?</string>
-    <string name="donation_body">Quest\'app è gratuita e senza pubblicità, fatta da una persona sola nel tempo libero. Se ti è utile, un piccolo contributo su Ko-fi aiuta a tenerla viva. Nessun obbligo: continui a usare tutto comunque.</string>
-    <string name="donation_support">Supporta su Ko-fi ☕</string>
-    <string name="donation_later">Forse più tardi</string>
-    <string name="donation_dismiss_30">Non mostrare\nper 30 giorni</string>
     <string name="client_options_title">Opzioni Client</string>
     <string name="send_mic_to_server_title">Condividi microfono</string>
     <string name="send_mic_to_server_subtitle">Parla attraverso il desktop (Discord, Zoom, giochi...)</string>
@@ -135,7 +130,6 @@
     <string name="settings_group_about">Informazioni e Aiuto</string>
     <string name="settings_item_show_intro_title">Mostra introduzione</string>
     <string name="settings_item_show_intro_desc">Rivedi il tour iniziale delle funzionalità</string>
-    <string name="developer_name">Programmato da</string>
     <string name="notification_permission_title">Permesso Notifiche</string>
     <string name="notification_permission_description">Per garantire che lo streaming continui a funzionare anche quando l\'app è in background, è necessario concedere il permesso per le notifiche.</string>
     <string name="grant_permission_button">Concedi Permesso</string>
@@ -210,10 +204,7 @@
     <string name="save_sdp">Salva SDP</string>
     <string name="sdp_copied">SDP copiato negli appunti</string>
     <string name="rtp_description">Copia o salva il file SDP per ascoltare con VLC o FFplay</string>
-    <string name="support_kofi_title">Offrimi un caffè</string>
-    <string name="support_kofi_desc">Se l\'app ti è utile, offrimi un caffè! ☕</string>
-    <string name="source_code_android">Codice sorgente Android</string>
-    <string name="source_code_desktop">Codice sorgente Desktop</string>
+    <string name="source_code_android">Codice sorgente AudioBridge</string>
     <string name="source_code_view_on_github">Visualizza su GitHub</string>
     <string name="app_version_label">Versione</string>
     <string name="settings_group_license">Licenza</string>
@@ -360,7 +351,7 @@
     <string name="script_action_set">Cambia impostazioni</string>
     <string name="close">Chiudi</string>
     <string name="status_protocol_incompatible">Versione del protocollo incompatibile</string>
-    <string name="status_server_silent_maybe_outdated">Il server non risponde alla richiesta di connessione. Se lo vedi nell\'elenco ma non si connette, probabilmente usa una versione precedente dell\'app: aggiornala su quel dispositivo.</string>
+    <string name="status_server_silent_maybe_outdated">Connessione scaduta. Verifica che l\'altro dispositivo sia online, raggiungibile e usi una versione compatibile di AudioBridge.</string>
     <string name="status_group_rekeyed">Chiave del gruppo cambiata dal trasmettitore</string>
     <string name="status_unauthorized">Connessione rifiutata dal server</string>
     <string name="status_awaiting_approval">In attesa di approvazione dall\'altro dispositivo…</string>
@@ -390,8 +381,6 @@
     <string name="key_dialog_wrong">Chiave errata. Riprova:</string>
     <string name="key_dialog_connect">Connetti</string>
     <string name="key_dialog_cancel">Annulla</string>
-    <string name="server_silent_title">L\'altro dispositivo non risponde</string>
-    <string name="server_silent_body">«%1$s» non ha risposto alla richiesta di connessione. Il motivo più probabile è che usi una versione precedente dell\'app, che non riesce a comunicare con questa: aggiornala su quel dispositivo. Altrimenti controlla che un firewall non stia bloccando la porta.</string>
     <string name="protocol_incompatible_title">L\'altro dispositivo va aggiornato</string>
     <string name="protocol_incompatible_title_local">Questo dispositivo va aggiornato</string>
     <string name="protocol_incompatible_body">Le due app usano versioni incompatibili del protocollo WFAS (questo dispositivo: v%1$d, altro dispositivo: v%2$d). La connessione è stata chiusa. Aggiorna entrambi i dispositivi all\'ultima versione.</string>
@@ -409,10 +398,6 @@
     <string name="settings_item_haptics_desc">Vibrazione su tocchi, interruttori e azioni principali</string>
     <string name="settings_item_blackout_outlined_title">Schermo scuro con contorni</string>
     <string name="settings_item_blackout_outlined_desc">Mantieni i controlli visibili come contorni bianchi invece di uno schermo completamente nero</string>
-    <string name="settings_item_show_donation_title">Mostra il messaggio di supporto</string>
-    <string name="settings_item_show_donation_desc">Riporta il messaggio Ko-fi che hai chiuso</string>
-    <string name="source_code_protocol">Protocollo WFAS v2</string>
-    <string name="source_code_protocol_desc">Implementazione di riferimento in C99 su GitHub</string>
     <string name="welcome_eyebrow">Audio in streaming via WiFi</string>
     <string name="welcome_headline">Il tuo telefono,\nil tuo altoparlante.</string>
     <string name="welcome_body">Manda l\'audio dal PC a questo dispositivo, o viceversa. Bassa latenza, sulla tua rete, niente cloud.</string>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Marco Morosi
+ * Copyright AudioBridge
  *
  * Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
  * the European Commission - subsequent versions of the EUPL (the "Licence");
@@ -132,7 +132,7 @@ object IpcAuth {
             lockDownFile(f)
             f.writeText(
                 buildString {
-                    append("# WiFi Audio Streaming control session - do not share\n")
+                    append("# AudioBridge control session - do not share\n")
                     append("v=$PROTOCOL_VERSION\n")
                     append("pid=$pid\n")
                     append("port=$port\n")

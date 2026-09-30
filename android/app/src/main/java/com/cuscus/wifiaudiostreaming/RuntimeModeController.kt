@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -96,6 +97,40 @@ object RuntimeModeController {
     }
 
     /**
+     * Notification command semantics: RECEIVE always means "connect now".
+     * If RECEIVE is already selected, rebuild the current transport instead of
+     * treating the button as a passive state selector.
+     */
+    fun restartReceiver(context: Context) {
+        val app = context.applicationContext
+        RoleSelectionGate.initialize(app)
+        StreamingActionReceiver.clearTaskRemovedStop(app)
+
+        if (!RoleSelectionGate.isReceiverSelected()) {
+            ShizukuAudioBridgeManager.stop(app)
+            NetworkManager.stopStreaming(app)
+            app.stopService(Intent(app, AudioCaptureService::class.java))
+            NotificationCenter.cancel(app, NotificationCenter.ID_SERVER)
+        }
+
+        RoleSelectionGate.selectReceiver(app)
+        ClientSessionController.restartCurrent(app)
+        NotificationCenter.postModeControl(app)
+
+        scope.launch {
+            val settings = SettingsDataStore(app).settingsFlow.first()
+            if (settings.autoConnectEnabled) {
+                val intent = Intent(app, AutoConnectService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    app.startForegroundService(intent)
+                } else {
+                    app.startService(intent)
+                }
+            }
+        }
+    }
+
+    /**
      * Switch the UI/runtime role to SEND without automatically starting capture.
      * The normal app Start button still controls capture.
      */
@@ -134,82 +169,108 @@ object RuntimeModeController {
             return
         }
 
+        scope.launch { startConfiguredSender(app) }
+    }
+
+    /**
+     * Notification command semantics: SEND always means "start sending now".
+     * If SEND is already active, tear down the current sender path first and
+     * start it again with the current settings.
+     */
+    fun restartSender(context: Context) {
+        val app = context.applicationContext
+        selectSenderIdle(app)
+
         scope.launch {
-            val settings = SettingsDataStore(app).settingsFlow.first()
+            ShizukuAudioBridgeManager.stop(app)
+            NetworkManager.stopStreaming(app)
+            app.stopService(Intent(app, AudioCaptureService::class.java))
+            NotificationCenter.cancel(app, NotificationCenter.ID_SERVER)
 
-            if (settings.streamInternal &&
-                InternalAudioBackend.normalize(settings.internalAudioBackend) == InternalAudioBackend.SHIZUKU
-            ) {
-                val unsupportedProtocols =
-                    settings.lastMulticastMode ||
-                        settings.rtpEnabled ||
-                        settings.httpEnabled ||
-                        settings.dlnaEnabled ||
-                        settings.snapcastEnabled
+            // UserService removal is asynchronous on some ROMs. Give the old
+            // privileged bridge a short window to disappear before rebinding.
+            delay(250L)
+            if (!RoleSelectionGate.isSenderSelected()) return@launch
 
-                if (unsupportedProtocols) {
-                    NetworkManager.connectionStatus.value =
-                        app.getString(R.string.shizuku_unicast_only)
-                    NotificationCenter.postModeControl(app)
-                    return@launch
-                }
+            startConfiguredSender(app)
+        }
+    }
 
-                val securityOff =
-                    settings.securityMode.equals("OFF", ignoreCase = true) &&
-                        !settings.encryptionEnabled &&
-                        !settings.qrPairingEnabled
+    private suspend fun startConfiguredSender(app: Context) {
+        val settings = SettingsDataStore(app).settingsFlow.first()
 
-                if (!securityOff) {
-                    NetworkManager.connectionStatus.value =
-                        app.getString(R.string.shizuku_security_off_required)
-                    NotificationCenter.postModeControl(app)
-                    return@launch
-                }
+        if (settings.streamInternal &&
+            InternalAudioBackend.normalize(settings.internalAudioBackend) == InternalAudioBackend.SHIZUKU
+        ) {
+            val unsupportedProtocols =
+                settings.lastMulticastMode ||
+                    settings.rtpEnabled ||
+                    settings.httpEnabled ||
+                    settings.dlnaEnabled ||
+                    settings.snapcastEnabled
 
-                ShizukuAudioBridgeManager.start(
-                    app,
-                    ShizukuAudioBridgeManager.Config(
-                        port = settings.streamingPort,
-                        sampleRate = settings.sampleRate,
-                        channels = if (settings.channelConfig.equals("STEREO", ignoreCase = true)) 2 else 1,
-                        packetBytes = settings.maxPayloadBytes,
-                        keepPlayingOnDevice = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
-                        networkInterfaceName = settings.networkInterface,
-                        persistAfterClient = true
-                    )
-                )
-                return@launch
-            }
-
-            if (!settings.streamInternal && settings.streamMic) {
-                if (
-                    ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) ==
-                    PackageManager.PERMISSION_GRANTED
-                ) {
-                    val command = com.cuscus.wifiaudiostreaming.scripting.ScriptCommand(
-                        com.cuscus.wifiaudiostreaming.scripting.ScriptActionType.START_SERVER
-                    )
-                    ScriptExecutor.startServerMicOnly(
-                        app,
-                        ScriptExecutor.resolveServerParams(settings, command)
-                    )
-                } else {
-                    NetworkManager.connectionStatus.value =
-                        app.getString(R.string.mic_permission_denied)
-                }
-                NotificationCenter.postModeControl(app)
-                return@launch
-            }
-
-            if (settings.streamInternal) {
-                // MediaProjection cannot be started headlessly by design.
+            if (unsupportedProtocols) {
                 NetworkManager.connectionStatus.value =
-                    app.getString(R.string.capture_backend_legacy_desc)
+                    app.getString(R.string.shizuku_unicast_only)
+                NotificationCenter.postModeControl(app)
+                return
+            }
+
+            val securityOff =
+                settings.securityMode.equals("OFF", ignoreCase = true) &&
+                    !settings.encryptionEnabled &&
+                    !settings.qrPairingEnabled
+
+            if (!securityOff) {
+                NetworkManager.connectionStatus.value =
+                    app.getString(R.string.shizuku_security_off_required)
+                NotificationCenter.postModeControl(app)
+                return
+            }
+
+            ShizukuAudioBridgeManager.start(
+                app,
+                ShizukuAudioBridgeManager.Config(
+                    port = settings.streamingPort,
+                    sampleRate = settings.sampleRate,
+                    channels = if (settings.channelConfig.equals("STEREO", ignoreCase = true)) 2 else 1,
+                    packetBytes = settings.maxPayloadBytes,
+                    keepPlayingOnDevice = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
+                    networkInterfaceName = settings.networkInterface,
+                    persistAfterClient = true
+                )
+            )
+            return
+        }
+
+        if (!settings.streamInternal && settings.streamMic) {
+            if (
+                ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                val command = com.cuscus.wifiaudiostreaming.scripting.ScriptCommand(
+                    com.cuscus.wifiaudiostreaming.scripting.ScriptActionType.START_SERVER
+                )
+                ScriptExecutor.startServerMicOnly(
+                    app,
+                    ScriptExecutor.resolveServerParams(settings, command)
+                )
             } else {
                 NetworkManager.connectionStatus.value =
-                    app.getString(R.string.select_audio_source_first)
+                    app.getString(R.string.mic_permission_denied)
             }
             NotificationCenter.postModeControl(app)
+            return
         }
+
+        if (settings.streamInternal) {
+            // MediaProjection cannot be started headlessly by design.
+            NetworkManager.connectionStatus.value =
+                app.getString(R.string.capture_backend_legacy_desc)
+        } else {
+            NetworkManager.connectionStatus.value =
+                app.getString(R.string.select_audio_source_first)
+        }
+        NotificationCenter.postModeControl(app)
     }
 }

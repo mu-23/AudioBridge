@@ -97,7 +97,7 @@ data class ChangelogItem(
 )
 
 private const val DESKTOP_RELEASES_URL = "https://github.com/mu23XR/AudioBridge/releases"
-private const val DESKTOP_DOWNLOAD_URL = "https://www.marcomorosi.eu/wifi-audio-streaming/download/"
+private const val DESKTOP_DOWNLOAD_URL = "https://github.com/mu23XR/AudioBridge/releases"
 
 data class ChangelogEntry(
     val version: String,

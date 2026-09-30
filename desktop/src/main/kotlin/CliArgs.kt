@@ -1133,7 +1133,7 @@ data class CliArgs(
 
         fun printBareHint() {
             println("""
-WiFi Audio Streaming ${VERSION} - Stream audio over your local network.
+AudioBridge ${VERSION} - Stream audio over your local network.
 
   wfas --help             all commands and options
   wfas --gui              open the desktop app
@@ -1162,7 +1162,7 @@ WiFi Audio Streaming ${VERSION} - Stream audio over your local network.
         fun printProtocol() {
             val v = NetworkHandler_v1.WFAS_PROTOCOL_VERSION
             println("""
-WFAS - WiFi Audio Streaming protocol, version $v
+WFAS - AudioBridge wire protocol, version $v
 
 WFAS streams raw 16-bit PCM audio over UDP on the local network. A session has
 three phases: discovery (the server announces itself), connection (handshake in

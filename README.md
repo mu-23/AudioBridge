@@ -8,6 +8,16 @@
 
 </div>
 
+## 项目状态与协作
+
+- [Open Issues](https://github.com/mu23XR/AudioBridge/issues)：当前 Bug / 功能任务的唯一正式任务列表
+- [Android 稳定性跟踪 #6](https://github.com/mu23XR/AudioBridge/issues/6)：下一稳定版前的阻塞问题
+- [仓库规范化跟踪 #7](https://github.com/mu23XR/AudioBridge/issues/7)：分支保护、CI、发布与治理剩余项
+- [CONTRIBUTING.md](CONTRIBUTING.md)：开发与 PR 规则
+- [SECURITY.md](SECURITY.md)：安全问题报告方式
+
+聊天记录不是任务真源；未解决工作应记录在 GitHub Issues。
+
 ## 仓库结构
 
 | 目录 | 内容 |

@@ -48,6 +48,13 @@ jobs:
           distribution: zulu
           java-version: "17"
 
+      - name: Resolve requested prerelease version
+        if: github.event_name == 'pull_request' && inputs.source_ref != ''
+        shell: pwsh
+        run: |
+          $request = Get-Content "$env:GITHUB_WORKSPACE/docs/releases/build-request.json" | ConvertFrom-Json
+          "WFAS_VERSION_NAME=$($request.version)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:

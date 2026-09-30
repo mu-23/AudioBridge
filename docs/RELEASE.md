@@ -47,6 +47,14 @@ release notes in `docs/releases/MAJOR.MINOR.PATCH-test.N.md` before tagging.
 Assets include SHA-256 checksums and the exact Android source commit. Manual
 workflow dispatch remains available for artifact-only test builds.
 
+Before this workflow reaches `main`, an in-repository PR may request a signed
+prerelease by changing `docs/releases/build-request.json` with a unique version
+and `publish: true`. Only same-repository PRs can run the signing job. The exact
+head SHA is used by all build/check jobs; publication creates the tag only after
+all gates pass. Fork PRs cannot sign or publish. Existing versions are never
+silently replaced. This explicit request file also allows artifact-only builds
+with `publish: false`.
+
 ## Rollback
 
 Do not delete previous stable Releases merely because a new release is bad. Publish a corrected higher version instead, or clearly mark the affected release as withdrawn.

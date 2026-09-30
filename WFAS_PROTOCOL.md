@@ -1,10 +1,10 @@
-# WFAS — WiFi Audio Streaming Protocol
+# WFAS — AudioBridge Wire Protocol
 
 **Protocol version: 2**
 Status: stable · Transport: UDP (IPv4) · Byte order: see each field
 
-This document specifies the wire protocol shared by the WiFi Audio Streaming
-desktop and Android applications. Both apps implement the same protocol and can
+This document specifies the wire protocol shared by the AudioBridge
+Desktop and Android applications. Both apps implement the same protocol and can
 act as either server (audio source) or client (audio sink).
 
 ---
@@ -519,13 +519,13 @@ QR invite" as **local UI state only**.
 Unicast:
 
 ```
-wifiaudio://pair?ip=<ip>&port=<port>&mode=unicast&key=<base64url>&exp=<unix_ts>&v=2
+audiobridge://pair?ip=<ip>&port=<port>&mode=unicast&key=<base64url>&exp=<unix_ts>&v=2
 ```
 
 Multicast:
 
 ```
-wifiaudio://pair?ip=<group_ip>&port=<port>&mode=multicast&key=<base64url>&epoch=<n>&exp=<unix_ts>&v=2
+audiobridge://pair?ip=<group_ip>&port=<port>&mode=multicast&key=<base64url>&epoch=<n>&exp=<unix_ts>&v=2
 ```
 
 | Field | Presence | Meaning |
@@ -547,8 +547,8 @@ actually running, i.e. when encryption is enabled.
 An equivalent HTTPS App Link form carries the same fields **in the fragment**:
 
 ```
-https://www.marcomorosi.eu/wifi-audio-streaming/pair#<same fields>
-https://www.marcomorosi.eu/it/wifi-audio-streaming/pair#<same fields>
+audiobridge://pair?<same fields>
+audiobridge://pair?<same fields>
 ```
 
 This is the form the QR encodes, so that a scanner without the app lands on a page that

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Marco Morosi
+ * Copyright AudioBridge
  *
  * Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
  * the European Commission - subsequent versions of the EUPL (the "Licence");
@@ -43,7 +43,7 @@ object DlnaConst {
     const val TYPE_CONNECTION_MANAGER = "ConnectionManager"
     const val TYPE_RENDERING_CONTROL = "RenderingControl"
     const val DEFAULT_FLAGS = "8D500000000000000000000000000000"
-    const val USER_AGENT = "Linux/1.0 UPnP/1.0 WiFiAudioStreaming/1.0 DLNADOC/1.50"
+    const val USER_AGENT = "Linux/1.0 UPnP/1.0 AudioBridge/1.0 DLNADOC/1.50"
     const val DIDL_ITEM_ID = "wfas-live-0"
     const val CONNECT_TIMEOUT_MS = 4000
     const val READ_TIMEOUT_MS = 6000

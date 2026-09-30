@@ -76,7 +76,7 @@ Desktop 代码已经并入本仓库，后续在这里直接维护，不再拆成
 
 Android 与 Windows Desktop 共用同一个 GitHub Releases 页面。
 
-在仓库创建一个 `v*` 标签（例如 `v1.2.1`）后，统一发布流水线会：
+创建严格的 `vMAJOR.MINOR.PATCH` 标签（例如 `v1.4.0`）后，统一发布流水线会：
 
 1. 运行 Android 单元测试并构建带固定签名的 APK。
 2. 构建 Windows Desktop 便携 ZIP。
@@ -108,11 +108,13 @@ cd desktop
 .\gradlew.bat createReleaseDistributable packagePortableArchives
 ```
 
-## 项目来源
+## 项目历史
 
-Android 与 Desktop 均基于 Marco Morosi 的 WiFi Audio Streaming 项目继续开发。
+AudioBridge 早期代码和设计曾参考并演进自 Marco Morosi 的开源 **WiFi Audio Streaming** 项目。
 
-本仓库自 2026 年 9 月起作为统一的独立维护版本继续演进，并保留原有版权、许可证和第三方声明。
+当前仓库已经作为独立的 AudioBridge 项目维护：Android Shizuku 音频路线、Desktop 客户端、包名、签名、发布、Issue/CI 和产品入口均由本仓库独立维护。
+
+原始版权/许可证声明和第三方许可文本按许可证要求保留在源码及许可证文件中；原项目的赞助、下载和产品入口不属于 AudioBridge 的运行界面。
 
 ## License
 

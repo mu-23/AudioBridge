@@ -23,7 +23,7 @@
  * - Linux   : PulseAudio/PipeWire simple API (default sink monitor)
  * - macOS   : stub — delegated to audio_engine_mac.m (ScreenCaptureKit)
  *
- * JNI Interface exposed to Kotlin (package com.marcomorosi.wfas):
+ * JNI Interface exposed to Kotlin (AudioBridge Desktop native bridge):
  *
  * boolean AudioEngine_nativeStart(int sampleRate, int channels, int bufferFrames)
  * boolean AudioEngine_nativeRead(short[] outBuf, int numSamples)

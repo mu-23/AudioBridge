@@ -136,6 +136,11 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
 
         String captureMode;
         try {
+            Context volumeContext = createSystemShellAudioContext(context);
+            AudioManager initialVolumeManager = AudioManager.class.getConstructor(Context.class)
+                    .newInstance(volumeContext);
+            boolean initialMuted = initialVolumeManager.isStreamMute(AudioManager.STREAM_MUSIC);
+            int initialVolume = initialVolumeManager.getStreamVolume(AudioManager.STREAM_MUSIC);
             if (Build.VERSION.SDK_INT >= 33) {
                 if (context == null) {
                     throw new IllegalStateException("Shizuku v13+ Context is required for AudioPolicy");
@@ -174,11 +179,9 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
                 throw new IllegalStateException("AudioRecord is not initialized");
             }
             if (captureMode.startsWith("REMOTE_SUBMIX")) {
-                Context shellContext = createSystemShellAudioContext(context);
-                captureVolumeManager = AudioManager.class.getConstructor(Context.class)
-                        .newInstance(shellContext);
-                originalMediaMuted = captureVolumeManager.isStreamMute(AudioManager.STREAM_MUSIC);
-                originalMediaVolume = captureVolumeManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+                captureVolumeManager = initialVolumeManager;
+                originalMediaMuted = initialMuted;
+                originalMediaVolume = initialVolume;
             }
             recorder.startRecording();
             if (recorder.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
@@ -998,14 +1001,15 @@ public final class ShizukuAudioBridgeService extends IShizukuAudioBridge.Stub {
             Thread.sleep(20L);
         }
         // Never change the local speaker's index to repair a capture-route mute.
-        captureMuteChanged = manager.isStreamMute(AudioManager.STREAM_MUSIC);
-        manager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, 0);
+        captureMuteChanged = originalMediaMuted;
+        // Match the volume-key action verified on the affected OEM. Explicit
+        // UNMUTE/setStreamVolume can copy a maximum index into the speaker map.
+        if (manager.isStreamMute(AudioManager.STREAM_MUSIC) ||
+                manager.getStreamVolume(AudioManager.STREAM_MUSIC) == 0) {
+            manager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, 0);
+        }
         if (mediaOutputDevices() != 0x8000) {
             throw new IllegalStateException("Media route changed during capture volume setup");
-        }
-        if (manager.getStreamVolume(AudioManager.STREAM_MUSIC) == 0) {
-            manager.setStreamVolume(AudioManager.STREAM_MUSIC,
-                    manager.getStreamMaxVolume(AudioManager.STREAM_MUSIC), 0);
         }
         Log.i(TAG, "capture route volume synchronized; originalMediaVolume=" +
                 originalMediaVolume + " originalMuted=" + originalMediaMuted);

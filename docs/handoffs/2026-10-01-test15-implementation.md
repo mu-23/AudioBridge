@@ -29,3 +29,9 @@ Pending CI and same-signer real-device tests. Do not close runtime issues based 
 Android regression tests and governance passed; Windows protocol checks revealed #13: reordered Snapcast volume echoes could restore an earlier command after confirming the newest one. Added a bounded 2.5-second history filter for superseded local volume/mute values, preserving unrelated remote values and accepting old values again after expiry. Tests now force out-of-order confirmation and check external changes/expiry; callback state uses an AtomicReference. Values matching a superseded local command are ambiguous during this short window because notifications carry no request ID.
 
 Fixed reusable/standalone Windows concurrency groups to prevent mutual cancellation. User explicitly authorized overwrite install on the connected tablet and phone and real-device validation once the signed build is ready. Runtime acceptance remains pending; no runtime issue closed.
+
+## Published build and failed real-device acceptance
+
+Published test.15 at 7d58607a357f1f11982f697cb32365183994d6d5 after all CI gates passed. APK SHA256 92FC8E5220FB488CC4C2B4A0312A7FAA6884A3A926C2AC6800B8F6B5A1DD6CDA, permanent signer verified locally with ApkVerifier. Both tablet/phone overwrite upgrades succeeded, code 609301933. Tablet snapshot unexpectedly showed speaker index 150 (original 0), so #10 acceptance FAILED. Stopped both apps; tablet owner death released bridge in 665ms. Confirmed speaker route, index 0, mute true after restoring test volume. No runtime issue closed.
+
+Corrective test.16 removes explicit UNMUTE and set-to-maximum; uses a single ADJUST_RAISE only when muted/zero, matching the previously observed physical volume-key fix. Original volume/mute are captured before AudioPolicy attempts. CI and renewed real-device acceptance pending. Evidence remains ignored under out/device-debug/test15.

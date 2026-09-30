@@ -74,6 +74,23 @@ jobs:
           test -f SECURITY.md
           test -f .github/dependabot.yml
 
+      - name: Reject upstream product links
+        run: |
+          set -euo pipefail
+          TARGETS=(
+            README.md
+            android/README.md
+            android/README_EN.md
+            desktop/README.md
+            android/fastlane
+            android/app/src/main
+            desktop/src/main
+          )
+          if grep -RInE             'ko-fi\.com|marcomorosi\.eu|github\.com/marcomorosi06|gitlab\.com/marcomorosi'             "${TARGETS[@]}"             --exclude='THIRD_PARTY_LICENSES.md'             --exclude='third_party_licenses.txt'; then
+            echo "Upstream product/donation links are not allowed in AudioBridge runtime/product surfaces."
+            exit 1
+          fi
+
       - name: Verify permanent signing policy
         run: |
           set -euo pipefail

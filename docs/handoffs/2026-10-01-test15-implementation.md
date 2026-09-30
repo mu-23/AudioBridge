@@ -23,3 +23,9 @@ Desktop RTP test helpers receive unique names; protocol executable checks join G
 ## Verification checkpoint
 
 Pending CI and same-signer real-device tests. Do not close runtime issues based on compilation. Detailed diagnostic source: 2026-10-01-device-debug.md; broader static review: 2026-10-01-version-review.md. Temporary probes/scripts are ignored under out/review. Existing diagnostic handoffs included unchanged except scoped updates.
+
+## CI blocker and device authorization checkpoint
+
+Android regression tests and governance passed; Windows protocol checks revealed #13: reordered Snapcast volume echoes could restore an earlier command after confirming the newest one. Added a bounded 2.5-second history filter for superseded local volume/mute values, preserving unrelated remote values and accepting old values again after expiry. Tests now force out-of-order confirmation and check external changes/expiry; callback state uses an AtomicReference. Values matching a superseded local command are ambiguous during this short window because notifications carry no request ID.
+
+Fixed reusable/standalone Windows concurrency groups to prevent mutual cancellation. User explicitly authorized overwrite install on the connected tablet and phone and real-device validation once the signed build is ready. Runtime acceptance remains pending; no runtime issue closed.

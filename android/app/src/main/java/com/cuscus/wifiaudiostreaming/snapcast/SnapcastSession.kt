@@ -330,7 +330,7 @@ class SnapcastSessionManager(
     private fun registerServices(activeEncoder: SnapcastEncoder) {
         val manager = context.getSystemService(Context.NSD_SERVICE) as? NsdManager ?: return
         nsdManager = manager
-        val instance = hostName.ifBlank { "WiFi Audio Streaming" }
+        val instance = hostName.ifBlank { "AudioBridge" }
 
         registerOne(
             manager,

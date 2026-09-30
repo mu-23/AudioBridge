@@ -22,9 +22,7 @@ object PendingDeepLink {
     }
 
     fun looksLikePairing(arg: String): Boolean =
-        arg.startsWith("${WfasPairingUri.SCHEME}://", ignoreCase = true) ||
-            arg.startsWith("https://${WfasPairingUri.APPLINK_HOST}${WfasPairingUri.APPLINK_PATH}", ignoreCase = true) ||
-            arg.startsWith("https://${WfasPairingUri.APPLINK_HOST}${WfasPairingUri.APPLINK_PATH_IT}", ignoreCase = true)
+        arg.startsWith("${WfasPairingUri.SCHEME}://", ignoreCase = true)
 }
 
 object ProtocolRegistrar {
@@ -48,7 +46,7 @@ object ProtocolRegistrar {
     private fun desktopFile(): File =
         File(
             System.getProperty("user.home"),
-            ".local/share/applications/wifi-audio-streaming-url.desktop"
+            ".local/share/applications/audiobridge-url.desktop"
         )
 
     private fun queryDefault(key: String): String? = runCatching {
@@ -96,7 +94,7 @@ object ProtocolRegistrar {
 
     fun register(): Result<Unit> = runCatching {
         val exe = launcherPath()
-            ?: error("cannot locate the WiFi Audio Streaming executable")
+            ?: error("cannot locate the AudioBridge executable")
         when {
             isWindows -> registerWindows(exe)
             isLinux -> registerLinux(exe)

@@ -229,7 +229,7 @@ class SnapcastStreamClient(
             put("MAC", clientId)
             put("HostName", clientName)
             put("Version", "0.27.0")
-            put("ClientName", "WiFi Audio Streaming")
+            put("ClientName", "AudioBridge")
             put("OS", System.getProperty("os.name") ?: "")
             put("Arch", System.getProperty("os.arch") ?: "")
             put("Instance", 1)

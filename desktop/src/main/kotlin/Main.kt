@@ -1900,7 +1900,7 @@ object NetworkHandler_v1 {
             append("<div class=\"links\">")
             append("<a href=\"https://github.com/mu23XR/AudioBridge\" target=\"_blank\">💻 Get Desktop App (GitHub)</a>")
             append("<a href=\"https://github.com/mu23XR/AudioBridge\" target=\"_blank\">📱 Get Android App (GitHub)</a>")
-            append("<a href=\"https://apt.izzysoft.de/fdroid/index/apk/com.cuscus.wifiaudiostreaming\" target=\"_blank\">📲 Get Android App (IzzyOnDroid)</a>")
+            append("<a href=\"https://github.com/mu23XR/AudioBridge/releases\" target=\"_blank\">📲 Get Android App (IzzyOnDroid)</a>")
             append("</div>")
 
             append("<div class=\"kofi\">")

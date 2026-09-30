@@ -132,7 +132,7 @@ object IpcAuth {
             lockDownFile(f)
             f.writeText(
                 buildString {
-                    append("# WiFi Audio Streaming control session - do not share\n")
+                    append("# AudioBridge control session - do not share\n")
                     append("v=$PROTOCOL_VERSION\n")
                     append("pid=$pid\n")
                     append("port=$port\n")

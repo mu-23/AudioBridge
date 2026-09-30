@@ -1254,8 +1254,8 @@ ENCRYPTION  (optional, requires a key)
   shared group key, so it assumes mutual trust among members (no source signatures).
 
   Releases:
-    Desktop  https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop/releases
-    Android  https://github.com/marcomorosi06/WiFiAudioStreaming-Android/releases
+    Desktop  https://github.com/mu23XR/AudioBridge/releases
+    Android  https://github.com/mu23XR/AudioBridge/releases
             """.trimIndent())
         }
 

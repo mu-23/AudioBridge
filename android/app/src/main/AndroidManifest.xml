@@ -66,7 +66,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- One filter, no host: it already covers every wifiaudio:// authority,
+            <!-- One filter, no host: it already covers every audiobridge:// authority,
                  pairing included, so a second one for host="pair" would only be a
                  duplicate. autoVerify has no meaning on a custom scheme - it applies
                  to http/https app links, which are declared separately below. -->
@@ -74,29 +74,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="wifiaudio" />
-            </intent-filter>
-
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="www.marcomorosi.eu"
-                    android:pathPrefix="/wifi-audio-streaming/pair" />
-                <data
-                    android:scheme="https"
-                    android:host="www.marcomorosi.eu"
-                    android:pathPrefix="/it/wifi-audio-streaming/pair" />
-                <data
-                    android:scheme="https"
-                    android:host="marcomorosi.eu"
-                    android:pathPrefix="/wifi-audio-streaming/pair" />
-                <data
-                    android:scheme="https"
-                    android:host="marcomorosi.eu"
-                    android:pathPrefix="/it/wifi-audio-streaming/pair" />
+                <data android:scheme="audiobridge" />
             </intent-filter>
 
             <meta-data

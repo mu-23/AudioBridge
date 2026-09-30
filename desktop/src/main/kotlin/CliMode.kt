@@ -364,7 +364,7 @@ private fun printCliWelcome() {
     println(bold("  |") + "  " + bold("WiFi Audio Streaming") + " - " + Strings.get("cli_welcome_thanks") + "  " + bold("|"))
     println(bold("  |") + " ".repeat(w) + bold("|"))
     println(bold("  |") + "  " + cyan("Android app:") + "  " + bold("|"))
-    println(bold("  |") + "  " + dim("https://github.com/marcomorosi06/") + "      " + bold("|"))
+    println(bold("  |") + "  " + dim("https://github.com/mu23XR/AudioBridge") + "      " + bold("|"))
     println(bold("  |") + "  " + dim("WiFiAudioStreaming-Android/releases") + "    " + bold("|"))
     println(bold("  |") + " ".repeat(w) + bold("|"))
     println(bold("  |") + "  " + Strings.get("cli_welcome_path_tip") + "  " + bold("|"))

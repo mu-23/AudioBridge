@@ -849,7 +849,7 @@ fun WelcomeScreen(
                                 Text(stringResource("welcome_website_btn"))
                             }
                             FilledTonalButton(
-                                onClick = { openUrl("https://github.com/marcomorosi06/WiFiAudioStreaming-Android/releases") },
+                                onClick = { openUrl("https://github.com/mu23XR/AudioBridge/releases") },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(Icons.Outlined.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -1080,7 +1080,7 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showLicensesDialog = false
-                    openUrl("https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop/blob/master/THIRD_PARTY_LICENSES.md")
+                    openUrl("https://github.com/mu23XR/AudioBridge/blob/main/desktop/THIRD_PARTY_LICENSES.md")
                 }) { Text(stringResource("license_read_full")) }
             },
             dismissButton = {

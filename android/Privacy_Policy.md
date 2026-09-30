@@ -57,7 +57,8 @@ When streaming stops or the application is closed, all audio and network data ar
 
 ---
 
-## 6. Contact  
+## 6. Contact
 
-If you have any questions or concerns about this Privacy Policy, please contact me at:  
-**marcomorosi47@gmail.com**  
+For questions or privacy concerns, use the AudioBridge repository:
+
+https://github.com/mu23XR/AudioBridge/issues

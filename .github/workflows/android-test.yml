@@ -17,31 +17,22 @@ on:
         required: false
         default: "AudioBridge-Android-Test"
         type: string
-  pull_request:
-    branches:
-      - "main"
-    paths:
-      - ".github/workflows/android-test.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: android-test-${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || github.head_ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.version_name || '1.3.1-test.14' }}
+  group: android-test-${{ inputs.source_ref }}-${{ inputs.version_name }}
   cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      TEST_SOURCE_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || github.head_ref }}
-      TEST_VERSION_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.version_name || '1.3.1-test.14' }}
-      TEST_ARTIFACT_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.artifact_name || 'AudioBridge-Android-Test' }}
 
     steps:
       - name: Validate test version
         env:
-          VERSION_NAME: ${{ env.TEST_VERSION_NAME }}
+          VERSION_NAME: ${{ inputs.version_name }}
         run: |
           set -euo pipefail
           if [[ ! "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+-test\.[0-9]+$ ]]; then
@@ -52,7 +43,7 @@ jobs:
       - name: Checkout requested source
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.TEST_SOURCE_REF }}
+          ref: ${{ inputs.source_ref }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -76,7 +67,7 @@ jobs:
 
       - name: Resolve shared Android version code
         env:
-          VERSION_NAME: ${{ env.TEST_VERSION_NAME }}
+          VERSION_NAME: ${{ inputs.version_name }}
         run: |
           set -euo pipefail
           YEAR=$(date -u +%Y)
@@ -136,8 +127,8 @@ jobs:
 
       - name: Verify APK signer and collect asset
         env:
-          ARTIFACT_NAME: ${{ env.TEST_ARTIFACT_NAME }}
-          VERSION_NAME: ${{ env.TEST_VERSION_NAME }}
+          ARTIFACT_NAME: ${{ inputs.artifact_name }}
+          VERSION_NAME: ${{ inputs.version_name }}
         run: |
           set -euo pipefail
           SRC="android/app/build/outputs/apk/release/app-release.apk"
@@ -159,7 +150,7 @@ jobs:
       - name: Upload test APK
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.TEST_ARTIFACT_NAME }}-${{ env.TEST_VERSION_NAME }}
+          name: ${{ inputs.artifact_name }}-${{ inputs.version_name }}
           path: release-assets/*
           retention-days: 14
           if-no-files-found: error

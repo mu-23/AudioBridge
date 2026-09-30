@@ -62,9 +62,9 @@ object CliHelpModel {
     )
 
     val LINKS: List<Pair<String, String>> = listOf(
-        "Desktop source"   to "https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop",
-        "Android app"      to "https://github.com/marcomorosi06/WiFiAudioStreaming-Android",
-        "WFAS v2 protocol" to "https://github.com/marcomorosi06/wfas-protocol"
+        "Desktop source"   to "https://github.com/mu23XR/AudioBridge",
+        "Android app"      to "https://github.com/mu23XR/AudioBridge",
+        "WFAS v2 protocol" to "https://github.com/mu23XR/AudioBridge/blob/main/WFAS_PROTOCOL.md"
     )
 
     private val START = HelpTopic(

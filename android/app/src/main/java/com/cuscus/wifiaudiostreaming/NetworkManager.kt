@@ -194,7 +194,6 @@ object NetworkManager {
         val appCtx = context.applicationContext
         donationTimerJob = scope.launch {
             delay(3 * 60 * 1000L)
-            com.cuscus.wifiaudiostreaming.data.SettingsDataStore(appCtx).setDonationQualified(true)
         }
     }
     fun cancelDonationTimer() { donationTimerJob?.cancel(); donationTimerJob = null }

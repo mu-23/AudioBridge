@@ -41,6 +41,9 @@ jobs:
         with:
           validate-wrappers: true
 
+      - name: Run Desktop checks
+        run: .\gradlew.bat check
+
       - name: Build Windows portable package
         run: .\gradlew.bat createReleaseDistributable packagePortableArchives
 

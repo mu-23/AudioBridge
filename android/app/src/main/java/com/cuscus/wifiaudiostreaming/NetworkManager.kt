@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Marco Morosi
+ * Copyright AudioBridge
  *
  * Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
  * the European Commission - subsequent versions of the EUPL (the "Licence");
@@ -180,9 +180,10 @@ object NetworkManager {
 
     // Ogni avvio di stream (server o client) apre una generazione. Il blocco
     // finally di un job superato non deve azzerare lo stato di quello nuovo.
-    @Volatile private var streamGeneration = 0L
+    private val streamGenerationCounter = java.util.concurrent.atomic.AtomicLong(0L)
+    private val streamGeneration: Long get() = streamGenerationCounter.get()
 
-    private fun openStreamGeneration(): Long = ++streamGeneration
+    private fun openStreamGeneration(): Long = streamGenerationCounter.incrementAndGet()
     @Volatile var serverStreamsMic = false
     // --------------------------------------
 
@@ -194,7 +195,6 @@ object NetworkManager {
         val appCtx = context.applicationContext
         donationTimerJob = scope.launch {
             delay(3 * 60 * 1000L)
-            com.cuscus.wifiaudiostreaming.data.SettingsDataStore(appCtx).setDonationQualified(true)
         }
     }
     fun cancelDonationTimer() { donationTimerJob?.cancel(); donationTimerJob = null }
@@ -479,10 +479,6 @@ object NetworkManager {
     private const val SILENT_PEER_TIMEOUT_MS = 6000L
 
     fun clearProtocolMismatch() { protocolMismatch.value = null }
-
-    val unresponsiveServer = MutableStateFlow<String?>(null)
-
-    fun clearUnresponsiveServer() { unresponsiveServer.value = null }
 
     val connectionStatus = MutableStateFlow("")
     val discoveredDevices = MutableStateFlow<Map<String, ServerInfo>>(emptyMap())
@@ -2237,7 +2233,7 @@ object NetworkManager {
         }
 
         prepareClientTransportAttempt(context)
-        openStreamGeneration()
+        val generation = openStreamGeneration()
         isServerStreaming = false
         activePeerIp = serverInfo.ip
         isStreamingCurrent.value = true
@@ -2265,6 +2261,7 @@ object NetworkManager {
         }
 
         streamingJob = scope.launch {
+            val transportJob = coroutineContext[Job]!!
             var connectedSuccessfully = false
             var disconnectionSoundPlayed = false
             val disconnectReason = java.util.concurrent.atomic.AtomicReference("LOCAL_OR_SERVICE_STOP")
@@ -2320,7 +2317,7 @@ object NetworkManager {
                         // Headroom: la coda di AudioTrack deve poter assorbire un burst senza
                         // bloccare la write, altrimenti l'arretrato migra nel socket dove non e'
                         // misurabile. Il livello reale lo tiene PlayoutGovernor scartando pacchetti.
-                        val headroomFrames = sampleRate * 200 / 1000
+                        val headroomFrames = sampleRate * 80 / 1000
                         var playbackBufferSize = minBuffer.coerceAtLeast((targetLatencyFrames + headroomFrames) * frameSize)
                         if (playbackBufferSize % frameSize != 0) {
                             playbackBufferSize += frameSize - (playbackBufferSize % frameSize)
@@ -2351,12 +2348,11 @@ object NetworkManager {
                             audioTrack!!, sampleRate, frameSize, effectiveLatencyMs, TAG
                         )
 
-                        val prerollLen = (sampleRate * frameSize * 30 / 1000)
+                        val prerollLen = (sampleRate * frameSize * 10 / 1000)
                             .coerceIn(0, playbackBufferSize - frameSize)
                             .let { it - (it % frameSize) }
                         if (prerollLen > 0) {
-                            audioTrack!!.write(ByteArray(prerollLen), 0, prerollLen, AudioTrack.WRITE_BLOCKING)
-                            playout.noteWritten(prerollLen)
+                            playout.writePcm(ByteArray(prerollLen), 0, prerollLen)
                         }
                         audioTrack!!.play()
                         LinkMetrics.start(
@@ -2405,8 +2401,6 @@ object NetworkManager {
                             ) {
                                 Log.w(TAG, "[CLIENT] nessuna risposta dopo ${SILENT_PEER_TIMEOUT_MS}ms, rinuncio")
                                 connectionStatus.value = context.getString(R.string.status_server_silent_maybe_outdated)
-                                unresponsiveServer.value =
-                                    serverInfo.hostname.ifBlank { serverInfo.ip }
                                 isStreamingCurrent.value = false
                                 withContext(Dispatchers.Main) { onServerDisconnected?.invoke() }
                                 return@launch
@@ -2536,7 +2530,7 @@ object NetworkManager {
                                 if (now - lastServerActivityAt.get() > serverActivityTimeoutMs) {
                                     markDisconnect("SERVER_ACTIVITY_TIMEOUT")
                                     if (disconnectionSoundEnabled && !ClientSessionController.wantsConnection()) { playDisconnectionSound(context); disconnectionSoundPlayed = true }
-                                    streamingJob?.cancel()
+                                    transportJob.cancel()
                                     break
                                 }
                             }
@@ -2557,7 +2551,7 @@ object NetworkManager {
                                     signalProtocolMismatch(packetVersion, PeerRole.SENDER)
                                     connectionStatus.value = context.getString(R.string.status_protocol_incompatible)
                                     markDisconnect("PROTOCOL_MISMATCH", "senderProtocol=${packetVersion} localProtocol=${WFAS_PROTOCOL_VERSION}")
-                                    streamingJob?.cancel()
+                                    transportJob.cancel()
                                     return
                                 }
                             }
@@ -2588,6 +2582,18 @@ object NetworkManager {
                             val seq       = ((data[4].toInt() and 0xFF) shl 8) or (data[5].toInt() and 0xFF)
                             val isSilence = (flags and 0x01) != 0
 
+                            // Header-only silence packets are sender keepalives.
+                            // They prove liveness without manufacturing PCM or increasing
+                            // the AudioTrack queue while the source device is silent.
+                            if (isSilence || PcmSilence.isZero(data, HEADER_SIZE, data.size - HEADER_SIZE)) {
+                                expectedSeq = (seq + 1) and 0xFFFF
+                                inSilenceRun = true
+                                concealTail = null
+                                lastGoodPcm = null
+                                pendingSmooth = true
+                                return
+                            }
+
                             LinkMetrics.onPacket(
                                 seq,
                                 ((data[6].toLong() and 0xFF) shl 24) or
@@ -2607,8 +2613,7 @@ object NetworkManager {
                                         val filled = rampedConceal(ref, wanted, frameSize)
                                         if (filled != null) {
                                             val body = wanted - (wanted % frameSize)
-                                            audioTrack.write(filled, 0, body, AudioTrack.WRITE_BLOCKING)
-                                            playout.noteWritten(body)
+                                            playout.writePcm(filled, 0, body)
                                             concealTail = filled.copyOfRange(body, filled.size)
                                         }
                                     }
@@ -2633,14 +2638,12 @@ object NetworkManager {
                                         rampedConceal(ref, silenceLen, frameSize) else null
                                     if (fadeOut != null) {
                                         val body = silenceLen - (silenceLen % frameSize)
-                                        audioTrack.write(fadeOut, 0, body, AudioTrack.WRITE_BLOCKING)
-                                        playout.noteWritten(body)
+                                        playout.writePcm(fadeOut, 0, body)
                                         concealTail = fadeOut.copyOfRange(body, fadeOut.size)
                                     } else {
                                         concealTail = null
                                         val silenceBuffer = ByteArray(silenceLen)
-                                        audioTrack.write(silenceBuffer, 0, silenceLen, AudioTrack.WRITE_BLOCKING)
-                                        playout.noteWritten(silenceLen)
+                                        playout.writePcm(silenceBuffer, 0, silenceLen)
                                     }
                                 }
                                 inSilenceRun = true
@@ -2666,8 +2669,7 @@ object NetworkManager {
                                     pendingSmooth = false
                                     val merged = crossfadeIntoReal(data, HEADER_SIZE, pcmLen, plcTail, frameSize)
                                     denoiseInPlace(merged, 0, pcmLen)
-                                    audioTrack.write(merged, 0, pcmLen, AudioTrack.WRITE_BLOCKING)
-                                    playout.noteWritten(pcmLen)
+                                    playout.writePcm(merged, 0, pcmLen)
                                     com.cuscus.wifiaudiostreaming.dsp.AmbientSpectrumAnalyzer
                                         .feedFrame(merged, 0, pcmLen, frameSize / 2, sampleRate)
                                     if (lastGoodPcm == null || lastGoodPcm!!.size != pcmLen) {
@@ -2694,15 +2696,13 @@ object NetworkManager {
                                         outB.putShort(s * 2, mixed.toShort())
                                     }
                                     denoiseInPlace(outBuf, 0, pcmLen)
-                                    audioTrack.write(outBuf, 0, pcmLen, AudioTrack.WRITE_BLOCKING)
-                                    playout.noteWritten(pcmLen)
+                                    playout.writePcm(outBuf, 0, pcmLen)
                                     // Feed ambient spectrum visualizer (client side – crossfade branch)
                                     com.cuscus.wifiaudiostreaming.dsp.AmbientSpectrumAnalyzer
                                         .feedFrame(outBuf, 0, pcmLen, frameSize / 2, sampleRate)
                                 } else {
                                     denoiseInPlace(data, HEADER_SIZE, pcmLen)
-                                    audioTrack.write(data, HEADER_SIZE, pcmLen, AudioTrack.WRITE_BLOCKING)
-                                    playout.noteWritten(pcmLen)
+                                    playout.writePcm(data, HEADER_SIZE, pcmLen)
                                     // Feed ambient spectrum visualizer (client side – normal branch)
                                     com.cuscus.wifiaudiostreaming.dsp.AmbientSpectrumAnalyzer
                                         .feedFrame(data, HEADER_SIZE, pcmLen, frameSize / 2, sampleRate)
@@ -2750,7 +2750,7 @@ object NetworkManager {
                                     }
                                     dg = socket.incoming.tryReceive().getOrNull()
                                 }
-                                if (byeReceived) { streamingJob?.cancel(); break }
+                                if (byeReceived) { transportJob.cancel(); break }
                                 if (audio.isEmpty()) continue
 
                                 // Un burst grosso non significa latenza alta: quanto scartare
@@ -2769,13 +2769,15 @@ object NetworkManager {
                             watchdogJob.cancel()
                         }
                     } finally {
-                        LinkMetrics.stop()
+                        if (generation == streamGeneration) LinkMetrics.stop()
                         unregisterClientPlaybackTrack(audioTrack)
                         audioTrack?.stop()
                         audioTrack?.release()
                         // Reset ambient visualizer so the background fades cleanly
-                        com.cuscus.wifiaudiostreaming.dsp.AmbientSpectrumAnalyzer.reset()
-                        if (connectedSuccessfully) {
+                        if (generation == streamGeneration) {
+                            com.cuscus.wifiaudiostreaming.dsp.AmbientSpectrumAnalyzer.reset()
+                        }
+                        if (connectedSuccessfully && generation == streamGeneration) {
                             withContext(NonCancellable) {
                                 try {
                                     socket?.send(Datagram(buildPacket { writeText("CLIENT_BYE") }, InetSocketAddress(serverInfo.ip, serverInfo.port)))
@@ -2820,7 +2822,7 @@ object NetworkManager {
                         )
                         val frameSize = if (channelConfig == "STEREO") 4 else 2
                         var playbackBufferSize = minBuffer.coerceAtLeast(
-                            (mcLatencyMs + 200) * sampleRate / 1000 * frameSize
+                            (mcLatencyMs + 80) * sampleRate / 1000 * frameSize
                         )
 
                         if (playbackBufferSize % frameSize != 0) {
@@ -3021,8 +3023,7 @@ object NetworkManager {
                                         val filled = rampedConceal(ref, wanted, mcFrameSize)
                                         if (filled != null && !mcPlayout.shouldDrop(wanted)) {
                                             val body = wanted - (wanted % mcFrameSize)
-                                            audioTrack.write(filled, 0, body, AudioTrack.WRITE_BLOCKING)
-                                            mcPlayout.noteWritten(body)
+                                            mcPlayout.writePcm(filled, 0, body)
                                             mcConcealTail = filled.copyOfRange(body, filled.size)
                                         }
                                     }
@@ -3048,8 +3049,7 @@ object NetworkManager {
                                 val faded = rampedConceal(ref, ref.size, mcFrameSize) ?: return
                                 if (mcPlayout.shouldDrop(ref.size)) return
                                 val body = ref.size - (ref.size % mcFrameSize)
-                                audioTrack.write(faded, 0, body, AudioTrack.WRITE_BLOCKING)
-                                mcPlayout.noteWritten(body)
+                                mcPlayout.writePcm(faded, 0, body)
                                 mcConcealTail = faded.copyOfRange(body, faded.size)
                             }
 
@@ -3092,8 +3092,7 @@ object NetworkManager {
                                                 val outPcm = if (t != null && r.pcm.size >= mcFrameSize)
                                                     crossfadeIntoReal(r.pcm, 0, r.pcm.size, t, mcFrameSize) else r.pcm
                                                 denoiseInPlace(outPcm, 0, outPcm.size)
-                                                audioTrack.write(outPcm, 0, outPcm.size, AudioTrack.WRITE_BLOCKING)
-                                                mcPlayout.noteWritten(outPcm.size)
+                                                mcPlayout.writePcm(outPcm, 0, outPcm.size)
                                                 mcRemember(r.pcm, 0, r.pcm.size)
                                                 // Feed ambient spectrum visualizer (multicast encrypted)
                                                 com.cuscus.wifiaudiostreaming.dsp.AmbientSpectrumAnalyzer
@@ -3111,8 +3110,7 @@ object NetworkManager {
                                                 crossfadeIntoReal(audio, MC_HEADER_SIZE, pcmLen, t, mcFrameSize)
                                             else audio.copyOfRange(MC_HEADER_SIZE, MC_HEADER_SIZE + pcmLen)
                                             denoiseInPlace(outPcm, 0, pcmLen)
-                                            audioTrack.write(outPcm, 0, pcmLen, AudioTrack.WRITE_BLOCKING)
-                                            mcPlayout.noteWritten(pcmLen)
+                                            mcPlayout.writePcm(outPcm, 0, pcmLen)
                                             // Feed ambient spectrum visualizer (multicast plain header)
                                             com.cuscus.wifiaudiostreaming.dsp.AmbientSpectrumAnalyzer
                                                 .feedFrame(outPcm, 0, pcmLen, if (channelConfig == "STEREO") 2 else 1, sampleRate)
@@ -3137,12 +3135,14 @@ object NetworkManager {
                             if (mcAbort) break
                         }
                     } finally {
-                        LinkMetrics.stop()
+                        if (generation == streamGeneration) LinkMetrics.stop()
                         unregisterClientPlaybackTrack(audioTrack)
                         audioTrack?.stop()
                         audioTrack?.release()
                         // Reset ambient visualizer so the background fades cleanly
-                        com.cuscus.wifiaudiostreaming.dsp.AmbientSpectrumAnalyzer.reset()
+                        if (generation == streamGeneration) {
+                            com.cuscus.wifiaudiostreaming.dsp.AmbientSpectrumAnalyzer.reset()
+                        }
                         try {
                             val groupAddress = InetAddress.getByName(NetworkSettings.MULTICAST_GROUP_IP)
                             multicastSocket?.let { MulticastNet.leaveAllGroups(it) }
@@ -3152,9 +3152,11 @@ object NetworkManager {
                     }
                 }
             } catch (e: BindException) {
+                if (generation != streamGeneration) return@launch
                 markDisconnect("BIND_ERROR", e.message.orEmpty())
                 connectionStatus.value = context.getString(R.string.status_port_in_use)
             } catch (e: Exception) {
+                if (generation != streamGeneration) return@launch
                 if (e is TimeoutCancellationException) {
                     markDisconnect("CONNECTION_TIMEOUT", e.message.orEmpty())
                     connectionStatus.value = "Timeout connessione al server"
@@ -3178,9 +3180,11 @@ object NetworkManager {
                             "status='${connectionStatus.value}' netRev=${networkRevision.value} " +
                             "metrics=${LinkMetrics.snapshot.value.format()}"
                 )
-                micStreamingJob?.cancel()
-                micStreamingJob = null
-                isMicMuted.value = false
+                if (generation == streamGeneration) {
+                    micStreamingJob?.cancel()
+                    micStreamingJob = null
+                    isMicMuted.value = false
+                }
                 if (connectedSuccessfully &&
                     !disconnectionSoundPlayed &&
                     disconnectionSoundEnabled &&
@@ -3190,10 +3194,11 @@ object NetworkManager {
                 }
                 val shouldNotifySessionOwner =
                     isStreamingCurrent.value || ClientSessionController.wantsConnection()
-                if (shouldNotifySessionOwner) {
+                if (shouldNotifySessionOwner && generation == streamGeneration) {
                     scope.launch(Dispatchers.Main) {
+                        if (generation != streamGeneration) return@launch
                         val currentStatus = connectionStatus.value
-                        finishClientTransportAttempt()
+                        finishClientTransportAttempt(generation)
 
                         val contactingPrefix = context.getString(R.string.status_contacting_server, "").substringBefore("%")
                         val waitingClientPrefix = context.getString(R.string.status_waiting_for_client, 0).substringBefore("%")
@@ -3236,7 +3241,8 @@ object NetworkManager {
         isStreamingCurrent.value = false
     }
 
-    private fun finishClientTransportAttempt() {
+    private fun finishClientTransportAttempt(generation: Long) {
+        if (generation != streamGeneration) return
         // End only this transport attempt. The logical RECEIVE mode and its
         // remembered target belong to ClientSessionController and stay alive.
         activePeerIp = null
@@ -3251,6 +3257,7 @@ object NetworkManager {
     }
 
     fun stopStreaming(context: Context) {
+        openStreamGeneration() // Invalidate pending old receiver finalizers immediately.
         activePeerIp = null
         unicastPeerConnected.value = false
         sessionEncryptedLive.value = false
@@ -3279,9 +3286,10 @@ object NetworkManager {
         micStreamingJob = null
         rtpJob = null
         httpJob = null
+        try { httpServerSocket?.close() } catch (failure: Exception) {
+            Log.w(TAG, "HTTP socket close failed", failure)
+        }
         httpServerSocket = null
-
-        try { httpServerSocket?.close() } catch (_: Exception) {}
 
         originalMediaVolume?.let {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -3479,7 +3487,7 @@ object NetworkManager {
                                 <head>
                                     <meta charset="UTF-8">
                                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                    <title>WiFi Audio Streaming</title>
+                                    <title>AudioBridge</title>
                                     <style>
                                         :root { --bg: #0f0f0f; --surface: #1e1e1e; --primary: #BB86FC; --text: #e0e0e0; --text-mut: #888; }
                                         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
@@ -3493,28 +3501,20 @@ object NetworkManager {
                                         .links { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
                                         .links a { text-decoration: none; color: var(--text); background: rgba(255,255,255,0.05); padding: 14px; border-radius: 16px; font-size: 14px; transition: background 0.2s; border: 1px solid rgba(255,255,255,0.05); font-weight: 500; }
                                         .links a:hover { background: rgba(255,255,255,0.1); }
-                                        .kofi { margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
-                                        .kofi a { color: #FF5E5B; text-decoration: none; font-weight: bold; font-size: 15px; transition: opacity 0.2s; }
-                                        .kofi a:hover { opacity: 0.8; }
                                     </style>
                                 </head>
                                 <body>
                                     <div class="card">
                                         <div class="icon">🎧</div>
-                                        <h2>WiFi Audio Streaming</h2>
+                                        <h2>AudioBridge</h2>
                                         <p class="subtitle">Codec AAC</p>
                                         
                                         <audio id="player" controls src="/stream"></audio>
                                         <button id="playBtn" class="play-btn" onclick="document.getElementById('player').style.display='block'; document.getElementById('player').play(); this.style.display='none';">▶ PLAY AUDIO</button>
 
                                         <div class="links">
-                                            <a href="https://github.com/marcomorosi06/WiFiAudioStreaming-Desktop" target="_blank">💻 Get Desktop App (GitHub)</a>
-                                            <a href="https://github.com/marcomorosi06/WiFiAudioStreaming-Android" target="_blank">📱 Get Android App (GitHub)</a>
-                                            <a href="https://apt.izzysoft.de/fdroid/index/apk/com.cuscus.wifiaudiostreaming" target="_blank">📲 Get Android App (IzzyOnDroid)</a>
-                                        </div>
-
-                                        <div class="kofi">
-                                            <a href="https://ko-fi.com/marcomorosi" target="_blank">☕ Support me on Ko-fi</a>
+                                            <a href="https://github.com/mu23XR/AudioBridge/releases" target="_blank">⬇ AudioBridge Releases</a>
+                                            <a href="https://github.com/mu23XR/AudioBridge" target="_blank">⌘ AudioBridge Source</a>
                                         </div>
                                     </div>
                                 </body>

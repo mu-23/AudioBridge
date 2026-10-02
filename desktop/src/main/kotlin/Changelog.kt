@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Marco Morosi
+ * Copyright AudioBridge
  *
  * Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
  * the European Commission - subsequent versions of the EUPL (the "Licence");
@@ -95,7 +95,7 @@ data class ChangelogItem(
     val linkUrl: String? = null
 )
 
-private const val ANDROID_RELEASES_URL = "https://github.com/mu-23/WiFiAudioStreaming/releases"
+private const val ANDROID_RELEASES_URL = "https://github.com/mu23XR/AudioBridge/releases"
 
 data class ChangelogEntry(
     val version: String,
@@ -175,8 +175,8 @@ object Changelog {
                     icon = Icons.Outlined.PhoneAndroid,
                     title = Bilingual("Update the Android app too", "Aggiorna anche l'app Android"),
                     body = Bilingual(
-                        "WiFi Audio Streaming for Android has been updated as well. Update it too so both ends stay compatible.",
-                        "Anche WiFi Audio Streaming per Android è stata aggiornata. Aggiornala anche tu, così i due lati restano compatibili."
+                        "AudioBridge for Android has been updated as well. Update it too so both ends stay compatible.",
+                        "Anche AudioBridge per Android è stata aggiornata. Aggiornala anche tu, così i due lati restano compatibili."
                     ),
                     linkLabel = Bilingual("Open on GitHub", "Apri su GitHub"),
                     linkUrl = ANDROID_RELEASES_URL
@@ -251,8 +251,8 @@ object Changelog {
                     icon = Icons.Outlined.PhoneAndroid,
                     title = Bilingual("Update the Android app too", "Aggiorna anche l'app Android"),
                     body = Bilingual(
-                        "WiFi Audio Streaming for Android has been updated as well. Update it too so both ends stay compatible.",
-                        "Anche WiFi Audio Streaming per Android è stata aggiornata. Aggiornala anche tu, così i due lati restano compatibili."
+                        "AudioBridge for Android has been updated as well. Update it too so both ends stay compatible.",
+                        "Anche AudioBridge per Android è stata aggiornata. Aggiornala anche tu, così i due lati restano compatibili."
                     ),
                     linkLabel = Bilingual("Open on GitHub", "Apri su GitHub"),
                     linkUrl = ANDROID_RELEASES_URL

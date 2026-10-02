@@ -12,6 +12,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.os.Binder
 import android.os.IBinder
 import android.os.RemoteException
 import android.util.Log
@@ -31,6 +32,7 @@ object ShizukuAudioBridgeManager {
     private const val REQUEST_CODE_PERMISSION = 0x5746
     private val USER_SERVICE_VERSION: Int = BuildConfig.VERSION_CODE
     private const val RUNTIME_PREFS = "wfas_shizuku_runtime"
+    private val ownerProcessToken: IBinder = Binder()
 
     data class Config(
         val port: Int,
@@ -513,7 +515,8 @@ object ShizukuAudioBridgeManager {
                 config.channels,
                 config.packetBytes,
                 config.keepPlayingOnDevice,
-                config.persistAfterClient
+                config.persistAfterClient,
+                ownerProcessToken
             ).also {
                 remote.setVolume(NetworkManager.serverVolume.value.coerceIn(0f, 2f))
             }

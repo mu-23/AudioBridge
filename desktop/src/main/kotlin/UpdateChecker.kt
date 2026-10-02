@@ -19,18 +19,15 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object DownloadLinks {
-    const val GITHUB_RELEASES = "https://github.com/mu-23/AudioBridge/releases"
-    private const val SITE_EN = "https://www.marcomorosi.eu/wifi-audio-streaming/download/"
-    private const val SITE_IT = "https://www.marcomorosi.eu/it/wifi-audio-streaming/download/"
-
-    fun site(): String =
-        if (java.util.Locale.getDefault().language.equals("it", ignoreCase = true)) SITE_IT else SITE_EN
+    const val GITHUB_RELEASES = "https://github.com/mu23XR/AudioBridge/releases"
+    fun site(): String = GITHUB_RELEASES
 }
+
 
 object UpdateChecker {
 
-    private const val REPO = "mu-23/AudioBridge"
-    const val RELEASES_URL = "https://github.com/mu-23/AudioBridge/releases/latest"
+    private const val REPO = "mu23XR/AudioBridge"
+    const val RELEASES_URL = "https://github.com/mu23XR/AudioBridge/releases/latest"
 
     val currentVersion: String get() = Strings.appVersion
 

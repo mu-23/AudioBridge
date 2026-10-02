@@ -252,19 +252,6 @@ object SettingsRepository {
     fun getMcastClientEpoch(ip: String): Long = prefs.getLong("mcast_client_epoch_$ip", 0L)
     fun setMcastClientEpoch(ip: String, e: Long) { prefs.putLong("mcast_client_epoch_$ip", e); runCatching { prefs.flush() } }
 
-    fun isDonationQualified(): Boolean = prefs.getBoolean("donation_qualified", false)
-    fun setDonationQualified(b: Boolean) { prefs.putBoolean("donation_qualified", b); runCatching { prefs.flush() } }
-    fun donationSnoozeUntil(): Long = prefs.getLong("donation_snooze_until", 0L)
-    fun setDonationSnoozeUntil(t: Long) { prefs.putLong("donation_snooze_until", t); runCatching { prefs.flush() } }
-    fun donationDismissCount(): Int = prefs.getInt("donation_dismiss_count", 0)
-    fun setDonationDismissCount(n: Int) { prefs.putInt("donation_dismiss_count", n); runCatching { prefs.flush() } }
-    fun donationBackoffDays(count: Int): Long = when {
-        count <= 1 -> 2L
-        count == 2 -> 5L
-        count == 3 -> 14L
-        else -> 30L
-    }
-
     const val VAULT_AUTH_KEY   = "authKey"
     const val VAULT_MANUAL_KEY = "manualAuthKey"
     const val ENV_AUTH_KEY     = "WFAS_AUTH_KEY"

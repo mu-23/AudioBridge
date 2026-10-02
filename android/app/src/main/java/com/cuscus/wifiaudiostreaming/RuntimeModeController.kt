@@ -12,7 +12,9 @@ import com.cuscus.wifiaudiostreaming.scripting.ScriptExecutor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -27,11 +29,20 @@ import java.util.concurrent.atomic.AtomicBoolean
 object RuntimeModeController {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val switchingOff = AtomicBoolean(false)
+    private var modeGeneration = 0L
+    private var pendingModeJob: Job? = null
+
+    private fun beginModeCommand(): Long {
+        pendingModeJob?.cancel()
+        pendingModeJob = null
+        return ++modeGeneration
+    }
 
     fun isSwitchingOff(): Boolean = switchingOff.get()
 
     fun selectOff(context: Context, keepControlNotification: Boolean = true) {
         val app = context.applicationContext
+        beginModeCommand()
         if (!switchingOff.compareAndSet(false, true)) return
         try {
             RoleSelectionGate.initialize(app)
@@ -66,6 +77,7 @@ object RuntimeModeController {
 
     fun selectReceiver(context: Context) {
         val app = context.applicationContext
+        val generation = beginModeCommand()
         RoleSelectionGate.initialize(app)
         StreamingActionReceiver.clearTaskRemovedStop(app)
 
@@ -82,8 +94,45 @@ object RuntimeModeController {
         ClientSessionController.enterReceiverMode(app)
         NotificationCenter.postModeControl(app)
 
-        scope.launch {
+        pendingModeJob = scope.launch {
             val settings = SettingsDataStore(app).settingsFlow.first()
+            if (generation != modeGeneration || !RoleSelectionGate.isReceiverSelected()) return@launch
+            if (settings.autoConnectEnabled) {
+                val intent = Intent(app, AutoConnectService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    app.startForegroundService(intent)
+                } else {
+                    app.startService(intent)
+                }
+            }
+        }
+    }
+
+    /**
+     * Notification command semantics: RECEIVE always means "connect now".
+     * If RECEIVE is already selected, rebuild the current transport instead of
+     * treating the button as a passive state selector.
+     */
+    fun restartReceiver(context: Context) {
+        val app = context.applicationContext
+        val generation = beginModeCommand()
+        RoleSelectionGate.initialize(app)
+        StreamingActionReceiver.clearTaskRemovedStop(app)
+
+        if (!RoleSelectionGate.isReceiverSelected()) {
+            ShizukuAudioBridgeManager.stop(app)
+            NetworkManager.stopStreaming(app)
+            app.stopService(Intent(app, AudioCaptureService::class.java))
+            NotificationCenter.cancel(app, NotificationCenter.ID_SERVER)
+        }
+
+        RoleSelectionGate.selectReceiver(app)
+        ClientSessionController.restartCurrent(app)
+        NotificationCenter.postModeControl(app)
+
+        pendingModeJob = scope.launch {
+            val settings = SettingsDataStore(app).settingsFlow.first()
+            if (generation != modeGeneration || !RoleSelectionGate.isReceiverSelected()) return@launch
             if (settings.autoConnectEnabled) {
                 val intent = Intent(app, AutoConnectService::class.java)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -101,6 +150,7 @@ object RuntimeModeController {
      */
     fun selectSenderIdle(context: Context) {
         val app = context.applicationContext
+        beginModeCommand()
         RoleSelectionGate.initialize(app)
         StreamingActionReceiver.clearTaskRemovedStop(app)
 
@@ -134,82 +184,111 @@ object RuntimeModeController {
             return
         }
 
-        scope.launch {
-            val settings = SettingsDataStore(app).settingsFlow.first()
+        val generation = modeGeneration
+        pendingModeJob = scope.launch { startConfiguredSender(app, generation) }
+    }
 
-            if (settings.streamInternal &&
-                InternalAudioBackend.normalize(settings.internalAudioBackend) == InternalAudioBackend.SHIZUKU
-            ) {
-                val unsupportedProtocols =
-                    settings.lastMulticastMode ||
-                        settings.rtpEnabled ||
-                        settings.httpEnabled ||
-                        settings.dlnaEnabled ||
-                        settings.snapcastEnabled
+    /**
+     * Notification command semantics: SEND always means "start sending now".
+     * If SEND is already active, tear down the current sender path first and
+     * start it again with the current settings.
+     */
+    fun restartSender(context: Context) {
+        val app = context.applicationContext
+        selectSenderIdle(app)
 
-                if (unsupportedProtocols) {
-                    NetworkManager.connectionStatus.value =
-                        app.getString(R.string.shizuku_unicast_only)
-                    NotificationCenter.postModeControl(app)
-                    return@launch
-                }
+        val generation = modeGeneration
+        pendingModeJob = scope.launch {
+            ShizukuAudioBridgeManager.stop(app)
+            NetworkManager.stopStreaming(app)
+            app.stopService(Intent(app, AudioCaptureService::class.java))
+            NotificationCenter.cancel(app, NotificationCenter.ID_SERVER)
 
-                val securityOff =
-                    settings.securityMode.equals("OFF", ignoreCase = true) &&
-                        !settings.encryptionEnabled &&
-                        !settings.qrPairingEnabled
+            // UserService removal is asynchronous on some ROMs. Give the old
+            // privileged bridge a short window to disappear before rebinding.
+            delay(250L)
+            if (generation != modeGeneration || !RoleSelectionGate.isSenderSelected()) return@launch
 
-                if (!securityOff) {
-                    NetworkManager.connectionStatus.value =
-                        app.getString(R.string.shizuku_security_off_required)
-                    NotificationCenter.postModeControl(app)
-                    return@launch
-                }
+            startConfiguredSender(app, generation)
+        }
+    }
 
-                ShizukuAudioBridgeManager.start(
-                    app,
-                    ShizukuAudioBridgeManager.Config(
-                        port = settings.streamingPort,
-                        sampleRate = settings.sampleRate,
-                        channels = if (settings.channelConfig.equals("STEREO", ignoreCase = true)) 2 else 1,
-                        packetBytes = settings.maxPayloadBytes,
-                        keepPlayingOnDevice = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
-                        networkInterfaceName = settings.networkInterface,
-                        persistAfterClient = true
-                    )
-                )
-                return@launch
-            }
+    private suspend fun startConfiguredSender(app: Context, generation: Long) {
+        val settings = SettingsDataStore(app).settingsFlow.first()
+        if (generation != modeGeneration || !RoleSelectionGate.isSenderSelected()) return
 
-            if (!settings.streamInternal && settings.streamMic) {
-                if (
-                    ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) ==
-                    PackageManager.PERMISSION_GRANTED
-                ) {
-                    val command = com.cuscus.wifiaudiostreaming.scripting.ScriptCommand(
-                        com.cuscus.wifiaudiostreaming.scripting.ScriptActionType.START_SERVER
-                    )
-                    ScriptExecutor.startServerMicOnly(
-                        app,
-                        ScriptExecutor.resolveServerParams(settings, command)
-                    )
-                } else {
-                    NetworkManager.connectionStatus.value =
-                        app.getString(R.string.mic_permission_denied)
-                }
-                NotificationCenter.postModeControl(app)
-                return@launch
-            }
+        if (settings.streamInternal &&
+            InternalAudioBackend.normalize(settings.internalAudioBackend) == InternalAudioBackend.SHIZUKU
+        ) {
+            val unsupportedProtocols =
+                settings.lastMulticastMode ||
+                    settings.rtpEnabled ||
+                    settings.httpEnabled ||
+                    settings.dlnaEnabled ||
+                    settings.snapcastEnabled
 
-            if (settings.streamInternal) {
-                // MediaProjection cannot be started headlessly by design.
+            if (unsupportedProtocols) {
                 NetworkManager.connectionStatus.value =
-                    app.getString(R.string.capture_backend_legacy_desc)
+                    app.getString(R.string.shizuku_unicast_only)
+                NotificationCenter.postModeControl(app)
+                return
+            }
+
+            val securityOff =
+                settings.securityMode.equals("OFF", ignoreCase = true) &&
+                    !settings.encryptionEnabled &&
+                    !settings.qrPairingEnabled
+
+            if (!securityOff) {
+                NetworkManager.connectionStatus.value =
+                    app.getString(R.string.shizuku_security_off_required)
+                NotificationCenter.postModeControl(app)
+                return
+            }
+
+            ShizukuAudioBridgeManager.start(
+                app,
+                ShizukuAudioBridgeManager.Config(
+                    port = settings.streamingPort,
+                    sampleRate = settings.sampleRate,
+                    channels = if (settings.channelConfig.equals("STEREO", ignoreCase = true)) 2 else 1,
+                    packetBytes = settings.maxPayloadBytes,
+                    keepPlayingOnDevice = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
+                    networkInterfaceName = settings.networkInterface,
+                    persistAfterClient = true
+                )
+            )
+            return
+        }
+
+        if (!settings.streamInternal && settings.streamMic) {
+            if (
+                ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                val command = com.cuscus.wifiaudiostreaming.scripting.ScriptCommand(
+                    com.cuscus.wifiaudiostreaming.scripting.ScriptActionType.START_SERVER
+                )
+                ScriptExecutor.startServerMicOnly(
+                    app,
+                    ScriptExecutor.resolveServerParams(settings, command)
+                )
             } else {
                 NetworkManager.connectionStatus.value =
-                    app.getString(R.string.select_audio_source_first)
+                    app.getString(R.string.mic_permission_denied)
             }
             NotificationCenter.postModeControl(app)
+            return
         }
+
+        if (settings.streamInternal) {
+            // MediaProjection cannot be started headlessly by design.
+            NetworkManager.connectionStatus.value =
+                app.getString(R.string.capture_backend_legacy_desc)
+        } else {
+            NetworkManager.connectionStatus.value =
+                app.getString(R.string.select_audio_source_first)
+        }
+        NotificationCenter.postModeControl(app)
     }
 }
